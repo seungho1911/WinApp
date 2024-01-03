@@ -5,8 +5,7 @@
 #include <math.h>
 #include <vector>
 #include <string>
-#include <time.h>
-#include <cstdlib>
+#include <ctime>
 
 #define UP 0
 #define DOWN 1
@@ -48,7 +47,7 @@ public:
 
 	virtual bool IsCollide(Object);
 	virtual bool IsCollide(Object*);
-	virtual void MoveOneFrame(int);
+	virtual void RunOneFrame(int);
 
 	void Draw(HDC hdc);
 };
@@ -61,7 +60,7 @@ public:
 
 	int GetDamage() { return _damage; }
 
-	virtual void MoveOneFrame(int) override;
+	virtual void RunOneFrame(int) override;
 };
 
 class MobObj : public Object
@@ -90,14 +89,14 @@ public:
 	void SetCooltime(double cooltime) { _bulletcooltime = cooltime; }
 	void SetLasttime(int lasttime) { _bulletlasttime = lasttime; }
 	
-	virtual void MoveOneFrame(int) override;
+	virtual void RunOneFrame(int) override;
 };
 
 class Enemy1 : public MobObj
 {
 public:
 	Enemy1(int hp, int damage, int size, double angle, double speed, POINT pos);
-	virtual void MoveOneFrame(int)  override;
+	virtual void RunOneFrame(int)  override;
 };
 
 class BarrierObj : public Object
@@ -109,26 +108,6 @@ public:
 	bool IsCollide(Object*) override;
 };
 
-class Shop
-{
-	int _maxcnt, _cnt;
-	Shop* _parent;
-	TCHAR _name[MAXLENGTH],_description[MAXLENGTH];
-	void(*_message)(Shop*);
-	void(*_upgrade)(Shop*);
-public:
-
-	Shop(TCHAR*, int, void(*)(Shop*), void(*)(Shop*));
-	Shop(TCHAR*, int, void(*)(Shop*), void(*)(Shop*), Shop*);
-	int GetMaxcnt() { return _maxcnt; }
-	int GetCnt() { return _cnt; }
-	TCHAR* GetName() { return _name; }
-	TCHAR* GetDescription() { return _description; }
-	void SetCnt(int cnt) { _cnt = cnt; }
-	void UpdateMessage() { _message(this); }
-	void Upgrade() { _upgrade(this); _message(this); }
-	bool IsVisiable() {return _parent->_cnt!=0;}
-};
 /*
 ==list==
 addshot
@@ -144,13 +123,5 @@ enemy move down
 */
 
 void Init();
-bool MoveFrame();
-void UpdateShopChoice();
-void AddShotMessage(Shop*);
-void AddShotUpgrade(Shop*);
-void ShotDamageMessage(Shop*);
-void ShotDamageUpgrade(Shop*);
-void ShotReloadMessage(Shop*);
-void ShotReloadUpgrade(Shop*);
-void AddBarrierMessage(Shop*);
-void AddBarrierUpgrade(Shop*);
+bool RunFrame();
+void CheckCollision();

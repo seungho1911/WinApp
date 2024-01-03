@@ -4,11 +4,9 @@ std::vector <BulletObj* > bullets;
 std::vector<MobObj*> enemys;
 Player* player;
 BarrierObj* barrier;
-std::vector<Shop*> shop;
 RECT rtMapSize;
 
 clock_t nLastTime;
-int ShopChoice[3];
 
 Object::Object(int size, double angle, double speed, POINT pos)
 {
@@ -17,13 +15,11 @@ Object::Object(int size, double angle, double speed, POINT pos)
 	_speed = speed;
 	_pos = pos;
 }
-
 void Object::MoveAngleToDir()
 {
-	_pos.x += (double)cos(_angle) * _speed;
-	_pos.y += (double)sin(_angle) * _speed;
+	_pos.x += (double)(cos(_angle) * _speed);
+	_pos.y += (double)(sin(_angle) * _speed);
 }
-
 void Object::Rotate(double angle)
 {
 	_angle += angle;
@@ -32,7 +28,6 @@ void Object::SetAngle(double angle)
 {
 	_angle = angle;
 }
-
 bool Object::IsCollide(Object t)
 {
 	POINT tpos = t.GetPos();
@@ -45,12 +40,10 @@ bool Object::IsCollide(Object* t)
 	long long int dis = (_pos.x - tpos.x) * (_pos.x - tpos.x) + (_pos.y - tpos.y) * (_pos.y - tpos.y);
 		return dis <= (_size + t->GetR())*(_size + t->GetR());
 }
-
-void Object::MoveOneFrame(int deltatime)
+void Object::RunOneFrame(int deltatime)
 {
 	throw "임시";
 }
-
 void Object::Draw(HDC hdc)
 {
 	Ellipse(hdc, (_pos.x - _size) - rtMapSize.left, (_pos.y - _size) - rtMapSize.top, (_pos.x + _size) - rtMapSize.left, (_pos.y + _size) - rtMapSize.top);
@@ -64,7 +57,7 @@ BulletObj::BulletObj(int damage, int speed, int size, double angle, POINT pos):O
 	_angle = angle;
 	_pos = pos;
 }
-void BulletObj::MoveOneFrame(int deltatime)
+void BulletObj::RunOneFrame(int deltatime)
 {
 	MoveAngleToDir();
 }
@@ -83,8 +76,7 @@ Player::Player(int hp, int damage, int size, double angle, double speed, int coo
 	_bulletcooltime = cooltime;
 	_bulletlasttime = 0;
 }
-
-void Player::MoveOneFrame(int deltatime)
+void Player::RunOneFrame(int deltatime)
 {
 	POINT ptPlayer = player->GetPos();
 
@@ -105,20 +97,20 @@ void Player::MoveOneFrame(int deltatime)
 	//wall collsion check
 	int MLeft = -1, MRight = -1, MTop = -1, MBottom = -1; //TODO:변수명
 
-	if (ptPlayer.x - R < rtMapSize.left) {
-		MLeft = +rtMapSize.left - (ptPlayer.x - R);
+	if (ptPlayer.x - _size < rtMapSize.left) {
+		MLeft = +rtMapSize.left - (ptPlayer.x - _size);
 		ptPlayer.x += MLeft - 1;
 	}
-	if (ptPlayer.x + R > rtMapSize.right) {
-		MRight = (ptPlayer.x + R) - rtMapSize.right;
+	if (ptPlayer.x + _size > rtMapSize.right) {
+		MRight = (ptPlayer.x + _size) - rtMapSize.right;
 		ptPlayer.x -= MRight - 1;
 	}
-	if (ptPlayer.y - R < rtMapSize.top) {
-		MTop = rtMapSize.top - (ptPlayer.y - R);
+	if (ptPlayer.y - _size < rtMapSize.top) {
+		MTop = rtMapSize.top - (ptPlayer.y - _size);
 		ptPlayer.y += MTop - 1;
 	}
-	if (ptPlayer.y + R > rtMapSize.bottom) {
-		MBottom = (ptPlayer.y + R) - rtMapSize.bottom;
+	if (ptPlayer.y + _size > rtMapSize.bottom) {
+		MBottom = (ptPlayer.y + _size) - rtMapSize.bottom;
 		ptPlayer.y -= MBottom - 1;
 	}
 
@@ -131,7 +123,7 @@ void Player::MoveOneFrame(int deltatime)
 	if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 && player->GetLasttime() <= 0) {
 		POINT ptMouse, ptPlayer = player->GetPos();
 		GetCursorPos(&ptMouse);
-		bullets.push_back(new BulletObj(1, 5, R/2 ,atan2((ptMouse.y - ptPlayer.y), (ptMouse.x - ptPlayer.x)), ptPlayer));
+		bullets.push_back(new BulletObj(100, 5, R/10 ,atan2((ptMouse.y - ptPlayer.y), (ptMouse.x - ptPlayer.x)), ptPlayer));
 		player->SetLasttime(player->GetCooltime());
 	}
 
@@ -143,8 +135,7 @@ void Player::MoveOneFrame(int deltatime)
 Enemy1::Enemy1(int hp, int damage, int size, double angle, double speed, POINT pos)
 	:MobObj(hp, damage, size, angle, speed, pos)
 {}
-
-void Enemy1::MoveOneFrame(int deltatime)
+void Enemy1::RunOneFrame(int deltatime)
 {
 	POINT ptPlayer = player->GetPos();
 	SetAngle(atan2(-(_pos.y - ptPlayer.y), -(_pos.x - ptPlayer.x)));
@@ -156,7 +147,6 @@ void BarrierObj::MovePos(POINT pos)
 {
 	_pos = pos;
 }
-
 bool BarrierObj::IsCollide(Object t)
 {
 	POINT tpos = t.GetPos();
@@ -164,7 +154,6 @@ bool BarrierObj::IsCollide(Object t)
 		+ pow(abs((((_pos.y-_size/2<=tpos.y?2:0)|((_pos.y-_size/2>tpos.y||_pos.y+_size/2<tpos.y)?1:0))-2))*(_pos.y + _size*(((_pos.y-_size/2<=tpos.y?2:0)|((_pos.y-_size/2>tpos.y||_pos.y+_size/2<tpos.y)?1:0))-2) - tpos.y), 2)
 		<= pow(t.GetR(),2)) ;
 }
-
 bool BarrierObj::IsCollide(Object* t)
 {
 	
@@ -211,67 +200,41 @@ bool BarrierObj::IsCollide(Object* t)
 	return dis <= (t->GetR());*/
 }
 
-Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*))//TODO:_name 초기화
-{
-	_maxcnt = maxcnt;
-	_cnt = 0;
-	_parent = NULL;
-	_tcscpy(_name, name);
-	memset(_description, 0, sizeof(char) * MAXLENGTH);
-	_message = message;
-	_upgrade = upgrade;
-}
-
-Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*), Shop* parent)//TODO:_name 초기화
-{
-	_maxcnt = maxcnt;
-	_cnt = 0;
-	_parent = parent;
-	_tcscpy(_name, name);
-	memset(_description, 0, sizeof(char) * MAXLENGTH);
-	_message = message;
-	_upgrade = upgrade;
-}
 
 void Init()
 {
-	Shop* parent;
-	srand(time(NULL));
-	
-	player = new Player(10,10,R,0,10,10, {100,100});
+	player = new Player(10,10,R/5,0,10,10, {100,100});
 	nLastTime = clock();
-
-	TCHAR title[MAXLENGTH];
-	_tcscpy(title, _T("Add Shot"));
-	shop.push_back(new Shop(title, 5, AddShotMessage, AddShotUpgrade));
-	_tcscpy(title, _T("Shot Damage"));
-	shop.push_back(new Shop(title, 5, ShotDamageMessage, ShotDamageUpgrade));
-	_tcscpy(title, _T("Shot Reload"));
-	shop.push_back(new Shop(title, 5, ShotReloadMessage, ShotReloadUpgrade));
-	_tcscpy(title, _T("Add Barrier"));
-	shop.push_back(new Shop(title, 1, AddBarrierMessage, AddBarrierUpgrade));
-	parent = shop.back();
 }
 
-bool MoveFrame()
+bool RunFrame()
 {
 	int deltatime = clock() - nLastTime;
 
+	player->RunOneFrame(deltatime);
 	for (auto i : bullets) {
-		i->MoveOneFrame(deltatime);
+		i->RunOneFrame(deltatime);
 	}
 	for (auto i : enemys) {
-		i->MoveOneFrame(deltatime);
+		i->RunOneFrame(deltatime);
 	}
-	player->MoveOneFrame(deltatime);
 
-	for (auto i : bullets) {
-		for (auto j : enemys) {
+	CheckCollision();
+	
+	nLastTime = clock();
+	if (player->GetHp() <= 0)return false;
+	return true;
+}
+
+void CheckCollision()
+{
+	for (auto& i : bullets) {
+		for (auto& j : enemys) {
 			if (i->IsCollide(j)) {
 				int hp = j->GetHp();
 				j->SetHp(hp - (i->GetDamage()));
 			}
-		} 
+		}
 	}
 	for (auto& i : enemys) {
 		if (i->IsCollide(player)) {
@@ -281,109 +244,42 @@ bool MoveFrame()
 			i = nullptr;
 		}
 	}
-
 	for (auto P = enemys.begin(); P != enemys.end();) {
 		if (*P == nullptr)P = enemys.erase(P);
 		else ++P;
 	}
-	
-	if (player->GetHp() <= 0)return false;
-	return true;
-}
 
-void UpdateShopChoice()
-{
-	bool check[SHOPLENGTH] = {false,};
-	for(int i=0;i<3;i++){
-		int g = rand()%SHOPLENGTH;
-		while(check[g] || shop[g]->GetMaxcnt() == shop[g]->GetCnt())g = rand()%SHOPLENGTH;
-		check[g] = true;
-		ShopChoice[i] = g;
-		shop[g]->UpdateMessage();
+	for (auto& i : bullets) {
+		POINT ptBullet = i->GetPos();
+		int size = i->GetSize();
+		int damage = i->GetDamage();
+		if (ptBullet.x - size < rtMapSize.left) {
+			rtMapSize.left -= damage;
+			delete i;
+			i = nullptr;
+			continue;
+		}
+		if (ptBullet.x + size > rtMapSize.right) {
+			rtMapSize.right += damage;
+			delete i;
+			i = nullptr;
+			continue;
+		}
+		if (ptBullet.y - size < rtMapSize.top) {
+			rtMapSize.top -= damage;
+			delete i;
+			i = nullptr;
+			continue;
+		}
+		if (ptBullet.y + size > rtMapSize.bottom) {
+			rtMapSize.bottom += damage;
+			delete i;
+			i = nullptr;
+			continue;
+		}
 	}
-}
-
-void AddShotMessage(Shop* subject)
-{
-	int scnt = subject->GetCnt();
-	int smaxcnt = subject->GetMaxcnt();
-	TCHAR* sdescription = subject->GetDescription();
-
-	TCHAR text[MAXLENGTH] = _T("Fire ");
-	_tcscat(text, INTTOCHAR(scnt));
-	if (scnt != smaxcnt) {
-		_tcscat(text, _T("("));
-		_tcscat(text, INTTOCHAR(scnt + 1));
-		_tcscat(text, _T(")"));
+	for (auto P = bullets.begin(); P != bullets.end();) {
+		if (*P == nullptr)P = bullets.erase(P);
+		else ++P;
 	}
-	_tcscat(text, (scnt == 1 ? _T(" bullet") : _T(" bullets")));
-	_tcscpy(sdescription, text);
-}
-
-void AddShotUpgrade(Shop* subject)
-{
-	
-}
-
-void ShotDamageMessage(Shop* subject)
-{
-	int scnt = subject->GetCnt();
-	int smaxcnt = subject->GetMaxcnt();
-	TCHAR* sdescription = subject->GetDescription();
-	
-	TCHAR text[MAXLENGTH] = _T("Shot damage is ");
-	_tcscat(text, INTTOCHAR(player->GetDamage()));
-	if (scnt != smaxcnt) {
-		_tcscat(text, _T("("));
-		_tcscat(text, INTTOCHAR(player->GetDamage() + 1));
-		_tcscat(text, _T(")"));
-	}
-	_tcscpy(sdescription, text);
-}
-
-void ShotDamageUpgrade(Shop* subject)
-{
-	int scnt = subject->GetCnt();
-	
-	subject->SetCnt(scnt + 1);
-	player->SetDamage(player->GetDamage() + 1);
-}
-
-void ShotReloadMessage(Shop* subject)
-{
-	int scnt = subject->GetCnt();
-	int smaxcnt = subject->GetMaxcnt();
-	TCHAR* sdescription = subject->GetDescription();
-	
-	TCHAR text[MAXLENGTH] = _T("Reload speed is ");
-	_tcscat(text, INTTOCHAR(player->GetCooltime()));
-	if (scnt != smaxcnt) {
-		_tcscat(text, _T("("));
-		_tcscat(text, INTTOCHAR(player->GetCooltime() - 1));
-		_tcscat(text, _T(")"));
-	}
-	_tcscat(text, _T("seconds"));
-	_tcscpy(sdescription, text);
-}
-
-void ShotReloadUpgrade(Shop* subject)
-{
-	int scnt = subject->GetCnt();
-	
-	subject->SetCnt(scnt + 1);
-	player->SetCooltime(player->GetCooltime() - 1);
-}
-
-void AddBarrierMessage(Shop* subject)
-{
-	int scnt = subject->GetCnt();
-	int smaxcnt = subject->GetMaxcnt();
-	TCHAR* sdescription = subject->GetDescription();
-	
-	_tcscpy(sdescription, (scnt == 1 ? _T("(Add Barrier)") : _T("Add Barrier")));
-}
-
-void AddBarrierUpgrade(Shop* subject)
-{
-
 }

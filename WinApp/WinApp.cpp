@@ -4,6 +4,7 @@
 #include "framework.h"
 #include "WinApp.h"
 #include "Game.h"
+#include "Shop.h"
 #include <stdio.h>
 #include <time.h>
 #include <cstdlib>
@@ -15,8 +16,8 @@ extern std::vector <BulletObj* > bullets;
 extern std::vector<MobObj*> enemys;
 extern Player* player;
 extern BarrierObj* barrier;
-extern std::vector<Shop*> shop;
 extern RECT rtMapSize;
+extern std::vector<Shop*> shop;
 extern int ShopChoice[3];
 
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
@@ -99,7 +100,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM,
 
 	return RegisterClassExW(&wcex);
 }
-
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
@@ -117,7 +117,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    return TRUE;
 }
-
 BOOL InitInstance_Shop(HINSTANCE hInstance, int nCmdShow)
 {
 	HWND hWnd = CreateWindowW(szWindowClass_Shop, szTitle, WS_POPUP|WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
@@ -134,12 +133,29 @@ BOOL InitInstance_Shop(HINSTANCE hInstance, int nCmdShow)
 	return TRUE;
 }
 
+
+void DrawRoundRectangle(HDC hdc, RECT rt, int curve)
+{
+	MoveToEx(hdc, rt.left, rt.top + curve, nullptr);
+	LineTo(hdc, rt.left, rt.bottom - curve);
+	MoveToEx(hdc, rt.right, rt.top + curve, nullptr);
+	LineTo(hdc, rt.right, rt.bottom - curve);
+	MoveToEx(hdc, rt.left + curve, rt.top, nullptr);
+	LineTo(hdc, rt.right - curve, rt.top);
+	MoveToEx(hdc, rt.left + curve, rt.bottom, nullptr);
+	LineTo(hdc, rt.right - curve, rt.bottom);
+	Ellipse(hdc, rt.left, rt.top, rt.left + curve*2, rt.top + curve*2);
+	Ellipse(hdc, rt.right - curve*2, rt.top, rt.right, rt.top + curve*2);
+	Ellipse(hdc, rt.left, rt.bottom - curve*2, rt.left + curve*2, rt.bottom);
+	Ellipse(hdc, rt.right - curve*2, rt.bottom - curve*2, rt.right, rt.bottom);
+}
+
 //Frame Func
-void Timerproc(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
+void Tick(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 {
     GetWindowRect(hWnd, &rtMapSize);
 
-    MoveFrame();
+    RunFrame();
     
     MoveWindow(hWnd, rtMapSize.left, rtMapSize.top, rtMapSize.right - rtMapSize.left, rtMapSize.bottom - rtMapSize.top, true);
 }
@@ -149,9 +165,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_CREATE:
-        SetTimer(hWnd, 1, 1, (TIMERPROC)Timerproc);
+        SetTimer(hWnd, 1, 1, (TIMERPROC)Tick);
         Init();
-        enemys.push_back(new Enemy1(10, 10, R ,0, 5, player->GetPos()));
+        InitShop();
         break;
     case WM_KEYDOWN:
         switch (wParam)
@@ -190,7 +206,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
-
 LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static HFONT hFont100,hFont50,hFont30;
@@ -221,14 +236,6 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		pt.y = HIWORD(lParam);
 		break; //"break;" is out of parentheses in window example code
 	}
-	/*case WM_MOUSEWHEEL:
-	{
-		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-		scroll += zDelta;
-		InvalidateRect(hWnd, NULL, TRUE);
-		//Maybe I should make scrollbar
-		break;
-	}*/
 	case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
@@ -247,30 +254,18 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			int width = 200/smaxcnt;
 
 			//square
+			SetDCPenColor(hdc, RGB(0, 0, 0));
+			DrawRoundRectangle(hdc, { center-150,250,center+150,800 }, 50);
 			
 			//text
-			//DrawText(hdc,szTemp, strlen(szTemp) ,&TextArea, DT_CENTER );
-			//SetTextAlign(hdc, TA_CENTER);
 			SelectObject(hdc, hFont50);
-			TextArea = {center-150, 300, center+150, 350};
+			TextArea = {center-130, 300, center+150, 350};
 			DrawText(hdc, shop[i]->GetName(), -1, &TextArea, DT_CENTER);
-			//TextOut(hdc, center, 300, shop[i]->GetName(), lstrlen(shop[i]->GetName()));
 			SelectObject(hdc, hFont30);
-			TextArea = {center-150, 450, center+150, 1100};
-			//TextArea = {0, 450, 300, 1100};
+			TextArea = {center-130, 450, center+150, 750};
 			TCHAR* view = shop[i]->GetDescription();
 			int lee = lstrlen(view);
 			DrawText(hdc, shop[i]->GetDescription(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
-			/*DrawText(hdc, _T("test"), 4, &TextArea, DT_CENTER);
-			TextArea = { center - 130, 500, center + 130, 1100 };
-			Rectangle(hdc, center - 130, 350, center + 130, 380);
-			DrawText(hdc, _T("1its test1"), lstrlen(_T("1its test1")), &TextArea, DT_LEFT);
-			TextArea = { center - 130, 550, center + 130, 1100 };
-			DrawText(hdc, _T("aaaaa"), lstrlen(_T("aaaaa")), &TextArea, DT_LEFT);
-			TextArea = { center - 130, 600, center + 130, 1100 };
-			DrawText(hdc, _T("bbaaaaabb"), lstrlen(_T("bbaaaaabb")), &TextArea, DT_LEFT);
-			TextOut(hdc, center, 400, _T("its test"), lstrlen(_T("its test")));*/
-			//TextOut(hdc, center, 450, shop[i]->GetDescription(), lstrlen(shop[i]->GetDescription()));
 			
 			//bar
 			for (int j = 0; j<smaxcnt; j++) {
@@ -296,9 +291,6 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	}
 	return 0;
 }
-
-
-
 LRESULT CALLBACK WndProc_Barrier(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static HBRUSH hBrush;
@@ -337,6 +329,7 @@ LRESULT CALLBACK WndProc_Barrier(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 	}
 	return 0;
 }
+
 
 // 정보 대화 상자의 메시지 처리기입니다.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
