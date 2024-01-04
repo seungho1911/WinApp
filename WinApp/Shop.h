@@ -6,6 +6,7 @@
 
 #define SHOPWIDTH 300
 #define SHOPGAP 20
+#define SHOPCURVE 50
 
 class Shop
 {
