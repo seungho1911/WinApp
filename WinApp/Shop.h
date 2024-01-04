@@ -4,6 +4,8 @@
 #include <time.h>
 #include <cstdlib>
 
+#define SHOPWIDTH 300
+#define SHOPGAP 20
 
 class Shop
 {
