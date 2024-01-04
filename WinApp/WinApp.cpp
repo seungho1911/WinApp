@@ -10,6 +10,7 @@
 #include <cstdlib>
 
 #define MAX_LOADSTRING 100
+#define BUTTON_RESET 1001
 
 // 전역 변수:
 extern std::vector <BulletObj* > bullets;
@@ -25,7 +26,6 @@ WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 WCHAR szWindowClass_Shop[MAX_LOADSTRING] = _T("game shop window");
 WCHAR szWindowClass_Barrier[MAX_LOADSTRING] = _T("game barrier window");
-WCHAR szWindowButton_Shop[MAX_LOADSTRING] = _T("game shop button");
 BOOL bShopOpen = false;
 
 
@@ -57,7 +57,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MyRegisterClass(hInstance, WndProc, szWindowClass);
 	MyRegisterClass(hInstance, WndProc_Shop, szWindowClass_Shop);
 	MyRegisterClass(hInstance, WndProc_Barrier, szWindowClass_Barrier);
-	//MyRegisterButton(hInstance, WndProc_Shop, szWindowButton_Shop);
 
 	srand(time(NULL));
 	
@@ -101,24 +100,8 @@ ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM,
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
 	return RegisterClassExW(&wcex);
-}/*
-ATOM MyRegisterButton(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM, LPARAM), WCHAR* name)
-{
-	WNDCLASS wc = {0};
+}
 
-	//wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = WndProc;
-	//wc.cbClsExtra = 0;
-	//wc.cbWndExtra = 0;
-	wc.hInstance = hInstance;
-	//wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINAPP));
-	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);  //why 0?
-	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	//wc.lpszMenuName = NULL;
-	wc.lpszClassName = name;
-
-	return RegisterClass(&wc);
-}*/
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
@@ -193,23 +176,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
+
         RECT rtWindow;
         GetWindowRect(hWnd, &rtWindow);
+		RECT rtText;
+		HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
+		GetClientRect(hWnd, &rtText);
+		HGDIOBJ oldfont = SelectObject(hdc, font);
+		TCHAR thp[MAXLENGTH] = _T("HP:");
+		_tcscat(thp, INTTOCHAR(player->GetHp()));
+		DrawText(hdc, thp, -1, &rtText, DT_TOP || DT_LEFT);
+		SelectObject(hdc, oldfont);
+		DeleteObject(font);
 
-		HPEN myPen = CreatePen(PS_SOLID, 7, RGB(0, 255, 0));
-		HGDIOBJ oldPen = SelectObject(hdc, myPen);
-
-		player->Draw(hdc);
-
-		SelectObject(hdc, oldPen);
-		DeleteObject(myPen);
-        
-        for (auto i : enemys) {
-            i->Draw(hdc);
-        }
-        for (auto i : bullets) {
-            i->Draw(hdc);
-        }
+		DrawGame(hdc, ps, rtWindow);
 
         EndPaint(hWnd, &ps);
         break;
@@ -224,18 +204,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	HWND hB1;
 	static HFONT hFont100,hFont50,hFont30;
+	static HPEN hPen5;
 	static int scroll=0;
 	switch (message)
 	{
 	case WM_CREATE:
+		hPen5 = CreatePen(PS_SOLID, 5, RGB(0, 0, 0));
 		hFont100 = CreateFont(100, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		hFont50 = CreateFont(50, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		hFont30 = CreateFont(30, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		UpdateShopChoice();
-		/*HWND hWnd = CreateWindowW(szWindowButton_Shop, szTitle, WS_CHILD|WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
-		0, 0, 1200,900, hwnd, (HMENU), hInstance, nullptr);*/
-		
+		//hB1 = CreateWindowW(_T("BUTTON"), _T("J"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		hB1 = CreateWindowW(_T("BUTTON"), _T("J"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		10, 10, 100,100, hWnd, (HMENU)BUTTON_RESET, hInst, nullptr);		
 		break;
 	case WM_KEYDOWN:
 		switch (wParam)
@@ -259,10 +242,10 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 
 		int k=0, windowcenter = rtwindow.right/2;
 		for(int i : ShopChoice){
-			int center = windowcenter - SHOPWIDTH/2*3 - SHOPGAP + k*(SHOPWIDTH + SHOPGAP);
-			if(IsCollideInRoundRectangle(pt,x, pt.y, rtwindow, SHOPCURVE)){
+			int center = windowcenter + (k-1)*(SHOPWIDTH + SHOPGAP);
+			if (IsCollideInRoundRectangle(pt.x, pt.y, { center - SHOPWIDTH / 2 , 250, center + SHOPWIDTH / 2 ,800}, SHOPCURVE)) {
 				shop[i]->Upgrade();
-				ShopChoice[k] = 0;
+				ShopChoice[k] = SHOPLENGTH +1;
 				InvalidateRect(hWnd, nullptr, TRUE);
 			}
 			k++;
@@ -284,12 +267,15 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		for(int i : ShopChoice){
 			int scnt = shop[i]->GetCnt();
 			int smaxcnt = shop[i]->GetMaxcnt();
-			int center = windowcenter - SHOPWIDTH/2*3 - SHOPGAP + k*(SHOPWIDTH + SHOPGAP);
+			int center = windowcenter + (k-1)*(SHOPWIDTH + SHOPGAP);
 			int barwidth = (SHOPWIDTH/2)/smaxcnt;
 
 			//square
-			SetDCPenColor(hdc, RGB(0, 0, 0));
+			HPEN hOldPen = (HPEN)SelectObject(hdc, hPen5);
+			if(i == SHOPLENGTH+1)SetDCPenColor(hdc, RGB(50, 50, 50));
+			else SetDCPenColor(hdc, RGB(0, 100, 0));
 			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,250,center+SHOPWIDTH/2,800 }, SHOPCURVE);
+			SelectObject(hdc, hOldPen);
 			
 			//text
 			SelectObject(hdc, hFont50);
@@ -301,8 +287,8 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			
 			//bar
 			for (int j = 0; j<smaxcnt; j++) {
-				if(j<scnt)SetDCPenColor(hdc, RGB(200, 0, 0));  //alternative : use graypen and not fill
-				else if(j==scnt)SetDCPenColor(hdc, RGB(0, 0, 200));
+				if(j<=scnt)SetDCPenColor(hdc, RGB(200, 0, 0));  //alternative : use graypen and not fill
+				else if(j==scnt+1)SetDCPenColor(hdc, RGB(0, 0, 200));
 				else SetDCPenColor(hdc, RGB(0, 200, 0));
 				Rectangle(hdc, center - smaxcnt*barwidth/2 + j*barwidth, 380, center - smaxcnt*barwidth/2 + (j+1)*barwidth, 390);
 			}
@@ -316,6 +302,10 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	}
 	case WM_DESTROY:
 		bShopOpen = false;
+		DeleteObject(hPen5);
+		DeleteObject(hFont30);
+		DeleteObject(hFont50);
+		DeleteObject(hFont100);
 		DestroyWindow(hWnd);
 		break;
 	default:
@@ -341,7 +331,7 @@ LRESULT CALLBACK WndProc_Barrier(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 	
-		POINT pos = barrier->GetPos();
+		POINT pos = barrier->GetScreenPos();
 		int r = barrier->GetR();
 	
 		HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);

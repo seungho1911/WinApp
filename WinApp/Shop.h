@@ -3,6 +3,7 @@
 #include "WinApp.h"
 #include "Game.h"
 #include <time.h>
+#include <cmath>
 #include <cstdlib>
 
 #define SHOPWIDTH 300
@@ -42,3 +43,4 @@ void ShotReloadMessage(Shop*);
 void ShotReloadUpgrade(Shop*);
 void AddBarrierMessage(Shop*);
 void AddBarrierUpgrade(Shop*);
+void Blank(Shop*);

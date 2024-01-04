@@ -19,6 +19,7 @@
 #define SHOPLENGTH 4
 
 #define DELETEINVECTOR(V) for (auto P = (V).begin(); P != (V).end();) {if (*P == nullptr)P = (V).erase(P);else ++P;}
+#define SECOND(N) (N)/100.0
 
 #define INTTOCHAR(N) [](int n) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%d"), n); return tchar;}(N)
 #define FLOATTOCHAR(N) [](float f) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%f"), f); return tchar;}(N)
@@ -28,23 +29,27 @@
 #define RADIAN(X) (X) * PI / 180
 */
 
+struct POS { double x, y; };
+
 class Object
 {
 protected:
-	POINT _pos;
+	POINT _screenpos;
+	POS _pos;
 	int _size;
 	double _angle;
 	double _speed;
 
 public:
-	Object(int size, double angle, double speed, POINT pos);
-	void MoveAngleToDir();
+	Object(int size, double angle, double speed, POS pos);
+	void MoveAngleToDir(int);
 
 	void Rotate(double);
 	void SetAngle(double);
 
-	POINT GetPos() { return _pos; }
-	void SetPos(POINT pos) { _pos = pos; }
+	POINT GetScreenPos() { return _screenpos; }
+	POS GetPos() { return _pos; }
+	void SetPos(POS pos) { _pos = pos; _screenpos = { (LONG)pos.x ,(LONG)pos.y }; }
 	int GetSize() { return _size; }
 	int GetR() { return _size; }
 
@@ -59,7 +64,7 @@ class BulletObj : public Object
 {
 	int _damage;
 public:
-	BulletObj(int damage, int speed, int size, double angle, POINT pos);
+	BulletObj(int damage, int speed, int size, double angle, POS pos);
 
 	int GetDamage() { return _damage; }
 
@@ -72,7 +77,7 @@ protected:
 	int _hp;
 	int _damage;
 public:
-	MobObj(int hp, int damage, int size, double angle, double speed, POINT pos);
+	MobObj(int hp, int damage, int size, double angle, double speed, POS pos);
 
 	int GetDamage() { return _damage; }
 	void SetDamage(int damage) { _damage = damage; }
@@ -85,7 +90,7 @@ class Player : public MobObj
 	int _bulletcooltime, _bulletlasttime;//총알 발사 쿨
 	//TODO:게임 관련 변수들 추가
 public:
-	Player(int hp, int damage, int size, double angle, double speed, int cooltime, POINT pos);
+	Player(int hp, int damage, int size, double angle, double speed, int cooltime, POS pos);
 
 	int GetCooltime() { return _bulletcooltime; }
 	int GetLasttime() { return _bulletlasttime; }
@@ -98,7 +103,7 @@ public:
 class Enemy1 : public MobObj
 {
 public:
-	Enemy1(int hp, int damage, int size, double angle, double speed, POINT pos);
+	Enemy1(int hp, int damage, int size, double angle, double speed, POS pos);
 	virtual void RunOneFrame(int)  override;
 };
 
@@ -129,3 +134,4 @@ void Init();
 bool RunFrame();
 void CheckCollision();
 void SpawnEnemy();
+void DrawGame(HDC, PAINTSTRUCT, RECT);

@@ -40,7 +40,16 @@ bool DrawRoundRectangle(HDC hdc, RECT rt, int curve)
 	LineTo(hdc, rt.right - curve, rt.top);
 	MoveToEx(hdc, rt.left + curve, rt.bottom, nullptr);
 	LineTo(hdc, rt.right - curve, rt.bottom);
-	Ellipse(hdc, rt.left, rt.top, rt.left + curve*2, rt.top + curve*2);
+
+	/*SetROP2(hdc, R2_XORPEN & R2_MERGEPEN);
+	Rectangle(hdc, rt.left, rt.top, rt.left + curve, rt.top + curve);*/
+	//AngleArc(hdc, rt.left - curve, rt.top - curve, curve, 0, 90);
+	AngleArc(hdc, rt.left - curve, rt.top - curve, curve, 90, 90);
+	//AngleArc(hdc, rt.left - curve, rt.top - curve, curve, 180, 90);
+	//AngleArc(hdc, rt.left - curve, rt.top - curve, curve, 270, 90);
+	//Ellipse(hdc, rt.left, rt.top, rt.left + curve*2, rt.top + curve*2);
+	/*SetROP2(hdc, R2_XORPEN);
+	Rectangle(hdc, rt.left, rt.top, rt.left + curve, rt.top + curve);*/
 	Ellipse(hdc, rt.right - curve*2, rt.top, rt.right, rt.top + curve*2);
 	Ellipse(hdc, rt.left, rt.bottom - curve*2, rt.left + curve*2, rt.bottom);
 	Ellipse(hdc, rt.right - curve*2, rt.bottom - curve*2, rt.right, rt.bottom);
@@ -50,9 +59,9 @@ bool DrawRoundRectangle(HDC hdc, RECT rt, int curve)
 bool IsCollideInRoundRectangle(int x,int y, RECT rt, int curve)
 {
 	return (rt.left<=x&&x<=rt.right&&rt.top<=y&&y<=rt.bottom)&&(
-		pow(min((x>=rt.left?x-rt.left:curve+1),(x<=rt.right?rt.right-x:curve+1)),2) + 
-		pow(min((y>=rt.top?y-rt.top:curve+1),(y<=rt.bottom?rt.bottom-y:curve+1)),2)
-		<= curve*curve);
+		((x - rt.left >= curve && rt.right - x >= curve) ||
+		 (y - rt.top >= curve && rt.bottom - y >= curve))||
+		(pow(min(x-rt.left,rt.right-x),2) + pow(min(y-rt.top,rt.bottom-y),2)<= curve*curve));
 }
 
 void InitShop()
@@ -70,6 +79,10 @@ void InitShop()
 	_tcscpy(title, _T("Add Barrier"));
 	shop.push_back(new Shop(title, 1, AddBarrierMessage, AddBarrierUpgrade));
 	parent = shop.back();
+
+
+	_tcscpy(title, _T(""));
+	shop.push_back(new Shop(title, 0, Blank, Blank));
 }
 void UpdateShopChoice()
 {
@@ -158,4 +171,9 @@ void AddBarrierMessage(Shop* subject)
 void AddBarrierUpgrade(Shop* subject)
 {
 
+}
+
+void Blank(Shop* subject)
+{
+	return;
 }
