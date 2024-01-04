@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <ctime>
+#include <stdlib.h>
 
 #define UP 0
 #define DOWN 1
@@ -16,6 +17,8 @@
 #define SPEED 10
 #define MAXLENGTH 80
 #define SHOPLENGTH 4
+
+#define DELETEINVECTOR(V) for (auto P = (V).begin(); P != (V).end();) {if (*P == nullptr)P = (V).erase(P);else ++P;}
 
 #define INTTOCHAR(N) [](int n) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%d"), n); return tchar;}(N)
 #define FLOATTOCHAR(N) [](float f) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%f"), f); return tchar;}(N)
@@ -125,3 +128,4 @@ enemy move down
 void Init();
 bool RunFrame();
 void CheckCollision();
+void SpawnEnemy();

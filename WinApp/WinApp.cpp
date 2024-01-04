@@ -151,7 +151,7 @@ void DrawRoundRectangle(HDC hdc, RECT rt, int curve)
 }
 
 //Frame Func
-void Tick(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
+void UpdateFrame(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 {
     GetWindowRect(hWnd, &rtMapSize);
 
@@ -160,12 +160,18 @@ void Tick(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
     MoveWindow(hWnd, rtMapSize.left, rtMapSize.top, rtMapSize.right - rtMapSize.left, rtMapSize.bottom - rtMapSize.top, true);
 }
 
+void MobSpawn(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
+{
+	SpawnEnemy();
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
     case WM_CREATE:
-        SetTimer(hWnd, 1, 1, (TIMERPROC)Tick);
+        SetTimer(hWnd, 1, 1, (TIMERPROC)UpdateFrame);
+        SetTimer(hWnd, 2, 1000, (TIMERPROC)MobSpawn);
         Init();
         InitShop();
         break;
@@ -187,7 +193,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         HDC hdc = BeginPaint(hWnd, &ps);
         RECT rtWindow;
         GetWindowRect(hWnd, &rtWindow);
-        player->Draw(hdc);
+
+		HPEN myPen = CreatePen(PS_SOLID, 7, RGB(0, 255, 0));
+		HGDIOBJ oldPen = SelectObject(hdc, myPen);
+
+		player->Draw(hdc);
+
+		SelectObject(hdc, oldPen);
+		DeleteObject(myPen);
+        
         for (auto i : enemys) {
             i->Draw(hdc);
         }
@@ -272,7 +286,7 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 				if(j<scnt)SetDCPenColor(hdc, RGB(200, 0, 0));  //alternative : use graypen and not fill
 				else if(j==scnt)SetDCPenColor(hdc, RGB(0, 0, 200));
 				else SetDCPenColor(hdc, RGB(0, 200, 0));
-				Rectangle(hdc, center - smaxcnt*width/2 + j*width, 380, center - smaxcnt*width/2 + j*width, 390);
+				Rectangle(hdc, center - smaxcnt*width/2 + j*width, 700, center - smaxcnt*width/2 + j*width, 750);///not work
 			}
 			
 			//upgradebutton

@@ -203,10 +203,11 @@ bool BarrierObj::IsCollide(Object* t)
 
 void Init()
 {
+	srand(time(NULL));
+
 	player = new Player(10,10,R/5,0,10,10, {100,100});
 	nLastTime = clock();
 }
-
 bool RunFrame()
 {
 	int deltatime = clock() - nLastTime;
@@ -225,7 +226,6 @@ bool RunFrame()
 	if (player->GetHp() <= 0)return false;
 	return true;
 }
-
 void CheckCollision()
 {
 	for (auto& i : bullets) {
@@ -233,9 +233,18 @@ void CheckCollision()
 			if (i->IsCollide(j)) {
 				int hp = j->GetHp();
 				j->SetHp(hp - (i->GetDamage()));
+				delete i;
+				i = nullptr;
+				if (j->GetHp() <= 0) {
+					delete j;
+					j = nullptr;
+				}
+				break;
 			}
 		}
+		DELETEINVECTOR(enemys)
 	}
+	DELETEINVECTOR(bullets)
 	for (auto& i : enemys) {
 		if (i->IsCollide(player)) {
 			int hp = player->GetHp();
@@ -244,11 +253,7 @@ void CheckCollision()
 			i = nullptr;
 		}
 	}
-	for (auto P = enemys.begin(); P != enemys.end();) {
-		if (*P == nullptr)P = enemys.erase(P);
-		else ++P;
-	}
-
+	DELETEINVECTOR(enemys)
 	for (auto& i : bullets) {
 		POINT ptBullet = i->GetPos();
 		int size = i->GetSize();
@@ -278,8 +283,12 @@ void CheckCollision()
 			continue;
 		}
 	}
-	for (auto P = bullets.begin(); P != bullets.end();) {
-		if (*P == nullptr)P = bullets.erase(P);
-		else ++P;
-	}
+	DELETEINVECTOR(bullets)
+}
+void SpawnEnemy()
+{
+	POINT ptEnemy = player->GetPos();
+	ptEnemy.x += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
+	ptEnemy.y += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
+	enemys.push_back(new Enemy1(1, 2, R / 2, 0, 10, ptEnemy));
 }
