@@ -28,8 +28,10 @@ Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*)
 	_upgrade = upgrade;
 }
 
-void DrawRoundRectangle(HDC hdc, RECT rt, int curve)
+bool DrawRoundRectangle(HDC hdc, RECT rt, int curve)
 {
+	if(rt.right-rt.left<curve*2)return false;
+	
 	MoveToEx(hdc, rt.left, rt.top + curve, nullptr);
 	LineTo(hdc, rt.left, rt.bottom - curve);
 	MoveToEx(hdc, rt.right, rt.top + curve, nullptr);
@@ -42,6 +44,8 @@ void DrawRoundRectangle(HDC hdc, RECT rt, int curve)
 	Ellipse(hdc, rt.right - curve*2, rt.top, rt.right, rt.top + curve*2);
 	Ellipse(hdc, rt.left, rt.bottom - curve*2, rt.left + curve*2, rt.bottom);
 	Ellipse(hdc, rt.right - curve*2, rt.bottom - curve*2, rt.right, rt.bottom);
+
+	return true;
 }
 bool IsCollideInRoundRectangle(int x,int y, RECT rt, int curve)
 {
