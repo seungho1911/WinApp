@@ -25,6 +25,7 @@ WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 WCHAR szWindowClass_Shop[MAX_LOADSTRING] = _T("game shop window");
 WCHAR szWindowClass_Barrier[MAX_LOADSTRING] = _T("game barrier window");
+WCHAR szWindowButton_Shop[MAX_LOADSTRING] = _T("game shop button");
 BOOL bShopOpen = false;
 
 
@@ -56,6 +57,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MyRegisterClass(hInstance, WndProc, szWindowClass);
 	MyRegisterClass(hInstance, WndProc_Shop, szWindowClass_Shop);
 	MyRegisterClass(hInstance, WndProc_Barrier, szWindowClass_Barrier);
+	//MyRegisterButton(hInstance, WndProc_Shop, szWindowButton_Shop);
 
 	srand(time(NULL));
 	
@@ -99,7 +101,24 @@ ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM,
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
 	return RegisterClassExW(&wcex);
-}
+}/*
+ATOM MyRegisterButton(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM, LPARAM), WCHAR* name)
+{
+	WNDCLASS wc = {0};
+
+	//wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = WndProc;
+	//wc.cbClsExtra = 0;
+	//wc.cbWndExtra = 0;
+	wc.hInstance = hInstance;
+	//wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINAPP));
+	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);  //why 0?
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	//wc.lpszMenuName = NULL;
+	wc.lpszClassName = name;
+
+	return RegisterClass(&wc);
+}*/
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
@@ -217,6 +236,9 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		hFont50 = CreateFont(50, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		hFont30 = CreateFont(30, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		UpdateShopChoice();
+		/*HWND hWnd = CreateWindowW(szWindowButton_Shop, szTitle, WS_CHILD|WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
+		0, 0, 1200,900, hwnd, (HMENU), hInstance, nullptr);*/
+		
 		break;
 	case WM_KEYDOWN:
 		switch (wParam)
