@@ -246,25 +246,23 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		HFONT hOldFont = (HFONT)SelectObject(hdc, hFont100);
 		DrawText(hdc, _T("Shop"), -1, &TextArea, DT_CENTER);
 		
-		int k=0;
+		int k=0, windowcenter = TextArea.right/2;
 		for(int i : ShopChoice){
 			int scnt = shop[i]->GetCnt();
 			int smaxcnt = shop[i]->GetMaxcnt();
-			int center = 300 + k*300;
-			int width = 200/smaxcnt;
+			int center = windowcenter - SHOPWIDTH/2*3 - SHOPGAP + k*(SHOPWIDTH + SHOPGAP);
+			int width = (SHOPWIDTH/2)/smaxcnt;
 
 			//square
 			SetDCPenColor(hdc, RGB(0, 0, 0));
-			DrawRoundRectangle(hdc, { center-150,250,center+150,800 }, 50);
+			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,250,center+SHOPWIDTH/2,800 }, 50);
 			
 			//text
 			SelectObject(hdc, hFont50);
-			TextArea = {center-130, 300, center+150, 350};
+			TextArea = {center-SHOPWIDTH/2, 300, center+SHOPWIDTH/2, 350};
 			DrawText(hdc, shop[i]->GetName(), -1, &TextArea, DT_CENTER);
 			SelectObject(hdc, hFont30);
-			TextArea = {center-130, 450, center+150, 750};
-			TCHAR* view = shop[i]->GetDescription();
-			int lee = lstrlen(view);
+			TextArea = {center-SHOPWIDTH/2, 450, center+SHOPWIDTH/2, 750};
 			DrawText(hdc, shop[i]->GetDescription(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 			
 			//bar
@@ -272,7 +270,7 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 				if(j<scnt)SetDCPenColor(hdc, RGB(200, 0, 0));  //alternative : use graypen and not fill
 				else if(j==scnt)SetDCPenColor(hdc, RGB(0, 0, 200));
 				else SetDCPenColor(hdc, RGB(0, 200, 0));
-				Rectangle(hdc, center - smaxcnt*width/2 + j*width, 380, center - smaxcnt*width/2 + j*width, 390);
+				Rectangle(hdc, center - smaxcnt*width/2 + j*width, 380, center - smaxcnt*width/2 + (j+1)*width, 390);
 			}
 			
 			//upgradebutton
