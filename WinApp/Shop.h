@@ -1,9 +1,13 @@
 #pragma once
 
+#include "WinApp.h"
 #include "Game.h"
 #include <time.h>
 #include <cstdlib>
 
+#define SHOPWIDTH 300
+#define SHOPGAP 20
+#define SHOPCURVE 50
 
 class Shop
 {
@@ -26,6 +30,8 @@ public:
 	bool IsVisiable() { return _parent->_cnt != 0; }
 };
 
+bool DrawRoundRectangle(HDC hdc, RECT rt, int curve);
+bool IsCollideInRoundRectangle(int x,int y, RECT rt, int curve);
 void InitShop();
 void UpdateShopChoice();
 void AddShotMessage(Shop*);

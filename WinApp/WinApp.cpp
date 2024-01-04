@@ -25,6 +25,7 @@ WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 WCHAR szWindowClass_Shop[MAX_LOADSTRING] = _T("game shop window");
 WCHAR szWindowClass_Barrier[MAX_LOADSTRING] = _T("game barrier window");
+WCHAR szWindowButton_Shop[MAX_LOADSTRING] = _T("game shop button");
 BOOL bShopOpen = false;
 
 
@@ -56,6 +57,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MyRegisterClass(hInstance, WndProc, szWindowClass);
 	MyRegisterClass(hInstance, WndProc_Shop, szWindowClass_Shop);
 	MyRegisterClass(hInstance, WndProc_Barrier, szWindowClass_Barrier);
+	//MyRegisterButton(hInstance, WndProc_Shop, szWindowButton_Shop);
 
 	srand(time(NULL));
 	
@@ -99,7 +101,24 @@ ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM,
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
 	return RegisterClassExW(&wcex);
-}
+}/*
+ATOM MyRegisterButton(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM, LPARAM), WCHAR* name)
+{
+	WNDCLASS wc = {0};
+
+	//wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = WndProc;
+	//wc.cbClsExtra = 0;
+	//wc.cbWndExtra = 0;
+	wc.hInstance = hInstance;
+	//wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINAPP));
+	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);  //why 0?
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	//wc.lpszMenuName = NULL;
+	wc.lpszClassName = name;
+
+	return RegisterClass(&wc);
+}*/
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
@@ -131,23 +150,6 @@ BOOL InitInstance_Shop(HINSTANCE hInstance, int nCmdShow)
 	UpdateWindow(hWnd);
 	
 	return TRUE;
-}
-
-
-void DrawRoundRectangle(HDC hdc, RECT rt, int curve)
-{
-	MoveToEx(hdc, rt.left, rt.top + curve, nullptr);
-	LineTo(hdc, rt.left, rt.bottom - curve);
-	MoveToEx(hdc, rt.right, rt.top + curve, nullptr);
-	LineTo(hdc, rt.right, rt.bottom - curve);
-	MoveToEx(hdc, rt.left + curve, rt.top, nullptr);
-	LineTo(hdc, rt.right - curve, rt.top);
-	MoveToEx(hdc, rt.left + curve, rt.bottom, nullptr);
-	LineTo(hdc, rt.right - curve, rt.bottom);
-	Ellipse(hdc, rt.left, rt.top, rt.left + curve*2, rt.top + curve*2);
-	Ellipse(hdc, rt.right - curve*2, rt.top, rt.right, rt.top + curve*2);
-	Ellipse(hdc, rt.left, rt.bottom - curve*2, rt.left + curve*2, rt.bottom);
-	Ellipse(hdc, rt.right - curve*2, rt.bottom - curve*2, rt.right, rt.bottom);
 }
 
 //Frame Func
@@ -231,6 +233,9 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		hFont50 = CreateFont(50, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		hFont30 = CreateFont(30, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		UpdateShopChoice();
+		/*HWND hWnd = CreateWindowW(szWindowButton_Shop, szTitle, WS_CHILD|WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
+		0, 0, 1200,900, hwnd, (HMENU), hInstance, nullptr);*/
+		
 		break;
 	case WM_KEYDOWN:
 		switch (wParam)
@@ -248,6 +253,21 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		POINT pt;
 		pt.x = LOWORD(lParam);
 		pt.y = HIWORD(lParam);
+		
+		RECT rtwindow;
+		GetClientRect(hWnd, &rtwindow);
+
+		int k=0, windowcenter = rtwindow.right/2;
+		for(int i : ShopChoice){
+			int center = windowcenter - SHOPWIDTH/2*3 - SHOPGAP + k*(SHOPWIDTH + SHOPGAP);
+			if(IsCollideInRoundRectangle(pt,x, pt.y, rtwindow, SHOPCURVE)){
+				shop[i]->Upgrade();
+				ShopChoice[k] = 0;
+				InvalidateRect(hWnd, nullptr, TRUE);
+			}
+			k++;
+		}
+		
 		break; //"break;" is out of parentheses in window example code
 	}
 	case WM_PAINT:
@@ -260,25 +280,23 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		HFONT hOldFont = (HFONT)SelectObject(hdc, hFont100);
 		DrawText(hdc, _T("Shop"), -1, &TextArea, DT_CENTER);
 		
-		int k=0;
+		int k=0, windowcenter = TextArea.right/2;
 		for(int i : ShopChoice){
 			int scnt = shop[i]->GetCnt();
 			int smaxcnt = shop[i]->GetMaxcnt();
-			int center = 300 + k*300;
-			int width = 200/smaxcnt;
+			int center = windowcenter - SHOPWIDTH/2*3 - SHOPGAP + k*(SHOPWIDTH + SHOPGAP);
+			int barwidth = (SHOPWIDTH/2)/smaxcnt;
 
 			//square
 			SetDCPenColor(hdc, RGB(0, 0, 0));
-			DrawRoundRectangle(hdc, { center-150,250,center+150,800 }, 50);
+			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,250,center+SHOPWIDTH/2,800 }, SHOPCURVE);
 			
 			//text
 			SelectObject(hdc, hFont50);
-			TextArea = {center-130, 300, center+150, 350};
+			TextArea = {center-SHOPWIDTH/2, 300, center+SHOPWIDTH/2, 350};
 			DrawText(hdc, shop[i]->GetName(), -1, &TextArea, DT_CENTER);
 			SelectObject(hdc, hFont30);
-			TextArea = {center-130, 450, center+150, 750};
-			TCHAR* view = shop[i]->GetDescription();
-			int lee = lstrlen(view);
+			TextArea = {center-SHOPWIDTH/2, 450, center+SHOPWIDTH/2, 750};
 			DrawText(hdc, shop[i]->GetDescription(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 			
 			//bar
@@ -286,7 +304,7 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 				if(j<scnt)SetDCPenColor(hdc, RGB(200, 0, 0));  //alternative : use graypen and not fill
 				else if(j==scnt)SetDCPenColor(hdc, RGB(0, 0, 200));
 				else SetDCPenColor(hdc, RGB(0, 200, 0));
-				Rectangle(hdc, center - smaxcnt*width/2 + j*width, 700, center - smaxcnt*width/2 + j*width, 750);///not work
+				Rectangle(hdc, center - smaxcnt*barwidth/2 + j*barwidth, 380, center - smaxcnt*barwidth/2 + (j+1)*barwidth, 390);
 			}
 			
 			//upgradebutton
