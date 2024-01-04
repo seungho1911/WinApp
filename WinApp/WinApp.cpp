@@ -152,23 +152,6 @@ BOOL InitInstance_Shop(HINSTANCE hInstance, int nCmdShow)
 	return TRUE;
 }
 
-
-void DrawRoundRectangle(HDC hdc, RECT rt, int curve)
-{
-	MoveToEx(hdc, rt.left, rt.top + curve, nullptr);
-	LineTo(hdc, rt.left, rt.bottom - curve);
-	MoveToEx(hdc, rt.right, rt.top + curve, nullptr);
-	LineTo(hdc, rt.right, rt.bottom - curve);
-	MoveToEx(hdc, rt.left + curve, rt.top, nullptr);
-	LineTo(hdc, rt.right - curve, rt.top);
-	MoveToEx(hdc, rt.left + curve, rt.bottom, nullptr);
-	LineTo(hdc, rt.right - curve, rt.bottom);
-	Ellipse(hdc, rt.left, rt.top, rt.left + curve*2, rt.top + curve*2);
-	Ellipse(hdc, rt.right - curve*2, rt.top, rt.right, rt.top + curve*2);
-	Ellipse(hdc, rt.left, rt.bottom - curve*2, rt.left + curve*2, rt.bottom);
-	Ellipse(hdc, rt.right - curve*2, rt.bottom - curve*2, rt.right, rt.bottom);
-}
-
 //Frame Func
 void Tick(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 {
@@ -256,6 +239,21 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		POINT pt;
 		pt.x = LOWORD(lParam);
 		pt.y = HIWORD(lParam);
+		
+		RECT rtwindow;
+		GetClientRect(hWnd, &rtwindow);
+
+		int k=0, windowcenter = rtwindow.right/2;
+		for(int i : ShopChoice){
+			int center = windowcenter - SHOPWIDTH/2*3 - SHOPGAP + k*(SHOPWIDTH + SHOPGAP);
+			if(IsCollideInRoundRectangle(pt,x, pt.y, rtwindow, SHOPCURVE)){
+				shop[i]->Upgrade();
+				ShopChoice[k] = 0;
+				InvalidateRect(hWnd, nullptr, TRUE);
+			}
+			k++;
+		}
+		
 		break; //"break;" is out of parentheses in window example code
 	}
 	case WM_PAINT:
@@ -273,11 +271,11 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			int scnt = shop[i]->GetCnt();
 			int smaxcnt = shop[i]->GetMaxcnt();
 			int center = windowcenter - SHOPWIDTH/2*3 - SHOPGAP + k*(SHOPWIDTH + SHOPGAP);
-			int width = (SHOPWIDTH/2)/smaxcnt;
+			int barwidth = (SHOPWIDTH/2)/smaxcnt;
 
 			//square
 			SetDCPenColor(hdc, RGB(0, 0, 0));
-			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,250,center+SHOPWIDTH/2,800 }, 50);
+			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,250,center+SHOPWIDTH/2,800 }, SHOPCURVE);
 			
 			//text
 			SelectObject(hdc, hFont50);
@@ -292,7 +290,7 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 				if(j<scnt)SetDCPenColor(hdc, RGB(200, 0, 0));  //alternative : use graypen and not fill
 				else if(j==scnt)SetDCPenColor(hdc, RGB(0, 0, 200));
 				else SetDCPenColor(hdc, RGB(0, 200, 0));
-				Rectangle(hdc, center - smaxcnt*width/2 + j*width, 380, center - smaxcnt*width/2 + (j+1)*width, 390);
+				Rectangle(hdc, center - smaxcnt*barwidth/2 + j*barwidth, 380, center - smaxcnt*barwidth/2 + (j+1)*barwidth, 390);
 			}
 			
 			//upgradebutton
