@@ -7,7 +7,7 @@ int ShopChoice[3];
 
 
 
-Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*))//TODO:_name �ʱ�ȭ
+Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*))//TODO:_name ÃÊ±âÈ­
 {
 	_maxcnt = maxcnt;
 	_cnt = 0;
@@ -17,7 +17,7 @@ Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*)
 	_message = message;
 	_upgrade = upgrade;
 }
-Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*), Shop* parent)//TODO:_name �ʱ�ȭ
+Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*), Shop* parent)//TODO:_name ÃÊ±âÈ­
 {
 	_maxcnt = maxcnt;
 	_cnt = 0;
@@ -28,6 +28,28 @@ Shop::Shop(TCHAR* name, int maxcnt, void(*message)(Shop*), void(*upgrade)(Shop*)
 	_upgrade = upgrade;
 }
 
+void DrawRoundRectangle(HDC hdc, RECT rt, int curve)
+{
+	MoveToEx(hdc, rt.left, rt.top + curve, nullptr);
+	LineTo(hdc, rt.left, rt.bottom - curve);
+	MoveToEx(hdc, rt.right, rt.top + curve, nullptr);
+	LineTo(hdc, rt.right, rt.bottom - curve);
+	MoveToEx(hdc, rt.left + curve, rt.top, nullptr);
+	LineTo(hdc, rt.right - curve, rt.top);
+	MoveToEx(hdc, rt.left + curve, rt.bottom, nullptr);
+	LineTo(hdc, rt.right - curve, rt.bottom);
+	Ellipse(hdc, rt.left, rt.top, rt.left + curve*2, rt.top + curve*2);
+	Ellipse(hdc, rt.right - curve*2, rt.top, rt.right, rt.top + curve*2);
+	Ellipse(hdc, rt.left, rt.bottom - curve*2, rt.left + curve*2, rt.bottom);
+	Ellipse(hdc, rt.right - curve*2, rt.bottom - curve*2, rt.right, rt.bottom);
+}
+bool IsCollideInRoundRectangle(int x,int y, RECT rt, int curve)
+{
+	return (rt.left<=x&&x<=rt.right&&rt.top<=y&&y<=rt.bottom)&&(
+		pow(min((x>=rt.left?x-rt.left:curve+1),(x<=rt.right?rt.right-x:curve+1)),2) + 
+		pow(min((y>=rt.top?y-rt.top:curve+1),(y<=rt.bottom?rt.bottom-y:curve+1)),2)
+		<= curve*curve);
+}
 
 void InitShop()
 {
