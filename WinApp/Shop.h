@@ -12,22 +12,23 @@
 
 class Shop
 {
-	int _maxcnt, _cnt;
+	int _maxcnt, _cnt, _delta;
 	Shop* _parent;
-	TCHAR _name[MAXLENGTH], _description[MAXLENGTH];
+	TCHAR _name[MAXLENGTH], _description[MAXLENGTH], _detail[MAXLENGTH];
 	void(*_message)(Shop*);
 	void(*_upgrade)(Shop*);
 public:
-
-	Shop(TCHAR*, int, void(*)(Shop*), void(*)(Shop*));
-	Shop(TCHAR*, int, void(*)(Shop*), void(*)(Shop*), Shop*);
+	Shop(TCHAR*, int, int, void(*)(Shop*), void(*)(Shop*));
+	Shop(TCHAR*, int, int, void(*)(Shop*), void(*)(Shop*), Shop*);
 	int GetMaxcnt() { return _maxcnt; }
 	int GetCnt() { return _cnt; }
+	int GetDelta() { return _delta; }
 	TCHAR* GetName() { return _name; }
 	TCHAR* GetDescription() { return _description; }
+	TCHAR* GetDetail() { return _detail; }
 	void SetCnt(int cnt) { _cnt = cnt; }
 	void UpdateMessage() { _message(this); }
-	void Upgrade() { _upgrade(this); _message(this); }
+	void Upgrade() { _upgrade(this); _cnt++; _message(this); }
 	bool IsVisiable() { return _parent->_cnt != 0; }
 };
 

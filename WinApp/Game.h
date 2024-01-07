@@ -22,27 +22,28 @@
 #define SECOND(N) (N)/100.0
 
 #define INTTOCHAR(N) [](int n) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%d"), n); return tchar;}(N)
-#define FLOATTOCHAR(N) [](float f) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%f"), f); return tchar;}(N)
+#define FLOATTOCHAR(N) [](float f) -> TCHAR* {TCHAR tchar[MAXLENGTH];  _stprintf(tchar,_T("%.2f"),f); return tchar;}(N)
 
-/*
+
 #define PI 3.1415926
 #define RADIAN(X) (X) * PI / 180
-*/
+
 
 struct POS { double x, y; };
 
 class Object
 {
-protected:
+private:
 	POINT _screenpos;
 	POS _pos;
+protected:
 	int _size;
 	double _angle;
 	double _speed;
 
 public:
 	Object(int size, double angle, double speed, POS pos);
-	void MoveAngleToDir(int);
+	void MoveToAngle(int);
 
 	void Rotate(double);
 	void SetAngle(double);
@@ -57,7 +58,7 @@ public:
 	virtual bool IsCollide(Object*);
 	virtual void RunOneFrame(int);
 
-	void Draw(HDC hdc);
+	virtual void Draw(HDC hdc);
 };
 
 class BulletObj : public Object
@@ -76,6 +77,7 @@ class MobObj : public Object
 protected:
 	int _hp;
 	int _damage;
+	int _shield;
 public:
 	MobObj(int hp, int damage, int size, double angle, double speed, POS pos);
 
@@ -100,19 +102,46 @@ public:
 	virtual void RunOneFrame(int) override;
 };
 
-class Enemy1 : public MobObj
+class EnemyObj : public MobObj
+{
+protected:
+	int _maxtime, _lasttime;
+public:
+	EnemyObj(int hp, int damage, int size, double angle, double speed, POS pos) : MobObj(hp, damage, size, angle, speed, pos) { _lasttime = 0; }
+};
+
+//basic Enemy
+class Enemy1 : public EnemyObj
 {
 public:
 	Enemy1(int hp, int damage, int size, double angle, double speed, POS pos);
 	virtual void RunOneFrame(int)  override;
 };
 
+//enemy bullet
+class Enemy2 : public EnemyObj
+{
+public:
+	Enemy2(int hp, int damage, int size, double angle, double speed, POS pos);
+	virtual void RunOneFrame(int)  override;
+};
+
+//boss
+class Enemy3 : public EnemyObj
+{
+public:
+	Enemy3(int hp, int damage, int size, double angle, double speed, POS pos);
+
+	virtual void RunOneFrame(int)  override;
+
+	virtual void Draw(HDC hdc) override;
+};
+
 class BarrierObj : public Object
 {
 	int _damage;
 public:
-	void MovePos(POINT);
-	bool IsCollide(Object) override;
+	void MovePos(POS);
 	bool IsCollide(Object*) override;
 };
 

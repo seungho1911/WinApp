@@ -14,7 +14,7 @@
 
 // 전역 변수:
 extern std::vector <BulletObj* > bullets;
-extern std::vector<MobObj*> enemys;
+extern std::vector<EnemyObj*> enemys;
 extern Player* player;
 extern BarrierObj* barrier;
 extern RECT rtMapSize;
@@ -156,7 +156,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE:
         SetTimer(hWnd, 1, 1, (TIMERPROC)UpdateFrame);
-        SetTimer(hWnd, 2, 1000, (TIMERPROC)MobSpawn);
+        SetTimer(hWnd, 2, 5000, (TIMERPROC)MobSpawn);
         Init();
         InitShop();
         break;
@@ -205,20 +205,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	HWND hB1;
-	static HFONT hFont100,hFont50,hFont30;
+	static HFONT hFont80,hFont50,hFont30;
+	static HBRUSH hBrushRed, hBrushGreen, hBrushBlue;
 	static HPEN hPen5;
 	static int scroll=0;
 	switch (message)
 	{
 	case WM_CREATE:
 		hPen5 = CreatePen(PS_SOLID, 5, RGB(0, 0, 0));
-		hFont100 = CreateFont(100, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
+		hBrushRed = CreateSolidBrush(RGB(255, 0, 0));
+		hBrushGreen = CreateSolidBrush(RGB(0, 255, 0));
+		hBrushBlue = CreateSolidBrush(RGB(0, 0, 255));
+		hFont80 = CreateFont(80, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		hFont50 = CreateFont(50, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 		hFont30 = CreateFont(30, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
-		UpdateShopChoice();
-		//hB1 = CreateWindowW(_T("BUTTON"), _T("J"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-		hB1 = CreateWindowW(_T("BUTTON"), _T("J"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-		10, 10, 100,100, hWnd, (HMENU)BUTTON_RESET, hInst, nullptr);		
+		UpdateShopChoice();	
 		break;
 	case WM_KEYDOWN:
 		switch (wParam)
@@ -243,13 +244,18 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		int k=0, windowcenter = rtwindow.right/2;
 		for(int i : ShopChoice){
 			int center = windowcenter + (k-1)*(SHOPWIDTH + SHOPGAP);
-			if (IsCollideInRoundRectangle(pt.x, pt.y, { center - SHOPWIDTH / 2 , 250, center + SHOPWIDTH / 2 ,800}, SHOPCURVE)) {
+			if (IsCollideInRoundRectangle(pt.x, pt.y, { center - SHOPWIDTH / 2 , 150, center + SHOPWIDTH / 2 ,700}, SHOPCURVE)) {
 				shop[i]->Upgrade();
-				ShopChoice[k] = SHOPLENGTH +1;
+				ShopChoice[k] = SHOPLENGTH;
 				InvalidateRect(hWnd, nullptr, TRUE);
+
+				return 0;
 			}
 			k++;
 		}
+
+		UpdateShopChoice();
+		InvalidateRect(hWnd, nullptr, TRUE);
 		
 		break; //"break;" is out of parentheses in window example code
 	}
@@ -258,42 +264,53 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 		RECT TextArea;
+
+		HPEN hOldPen;
+		HFONT hOldFont;
+		HBRUSH hOldBrush;
+
 		GetClientRect(hWnd, &TextArea);
 	
-		HFONT hOldFont = (HFONT)SelectObject(hdc, hFont100);
-		DrawText(hdc, _T("Shop"), -1, &TextArea, DT_CENTER);
+		hOldFont = (HFONT)SelectObject(hdc, hFont80);
+		DrawText(hdc, _T("Upgrade"), -1, &TextArea, DT_CENTER);
 		
 		int k=0, windowcenter = TextArea.right/2;
 		for(int i : ShopChoice){
 			int scnt = shop[i]->GetCnt();
 			int smaxcnt = shop[i]->GetMaxcnt();
 			int center = windowcenter + (k-1)*(SHOPWIDTH + SHOPGAP);
-			int barwidth = (SHOPWIDTH/2)/smaxcnt;
+			int barwidth = smaxcnt != 0 ? (SHOPWIDTH/2)/smaxcnt : 0;
 
 			//square
-			HPEN hOldPen = (HPEN)SelectObject(hdc, hPen5);
+			hOldPen = (HPEN)SelectObject(hdc, hPen5);
+			//hOldPen = (HPEN)SelectObject(hdc, GetStockObject(DC_PEN));
 			if(i == SHOPLENGTH+1)SetDCPenColor(hdc, RGB(50, 50, 50));
-			else SetDCPenColor(hdc, RGB(0, 100, 0));
-			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,250,center+SHOPWIDTH/2,800 }, SHOPCURVE);
+			else SetDCPenColor(hdc, RGB(0, 255, 0));
+			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,150,center+SHOPWIDTH/2,700 }, SHOPCURVE);
 			SelectObject(hdc, hOldPen);
 			
 			//text
 			SelectObject(hdc, hFont50);
-			TextArea = {center-SHOPWIDTH/2, 300, center+SHOPWIDTH/2, 350};
+			TextArea = {center-SHOPWIDTH/2, 200, center+SHOPWIDTH/2, 250};
 			DrawText(hdc, shop[i]->GetName(), -1, &TextArea, DT_CENTER);
 			SelectObject(hdc, hFont30);
-			TextArea = {center-SHOPWIDTH/2, 450, center+SHOPWIDTH/2, 750};
+			TextArea = {center-SHOPWIDTH/2, 350, center+SHOPWIDTH/2, 550};
 			DrawText(hdc, shop[i]->GetDescription(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
+			TextArea = {center-SHOPWIDTH/2, 600, center+SHOPWIDTH/2, 700};
+			DrawText(hdc, shop[i]->GetDetail(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
+			SelectObject(hdc, hOldFont);
 			
 			//bar
+			hOldBrush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
 			for (int j = 0; j<smaxcnt; j++) {
-				if(j<=scnt)SetDCPenColor(hdc, RGB(200, 0, 0));  //alternative : use graypen and not fill
-				else if(j==scnt+1)SetDCPenColor(hdc, RGB(0, 0, 200));
-				else SetDCPenColor(hdc, RGB(0, 200, 0));
-				Rectangle(hdc, center - smaxcnt*barwidth/2 + j*barwidth, 380, center - smaxcnt*barwidth/2 + (j+1)*barwidth, 390);
+				if(j<scnt)SelectObject(hdc, hBrushGreen);
+				else if(j==scnt)SelectObject(hdc, hBrushBlue);
+				else SelectObject(hdc, hBrushRed);
+				Rectangle(hdc, center - smaxcnt*barwidth/2 + j*barwidth, 260, center - smaxcnt*barwidth/2 + (j+1)*barwidth, 270);
 			}
+			SetDCBrushColor(hdc, RGB(255, 255, 255));
+			SelectObject(hdc, hOldBrush);
 			
-			//upgradebutton
 			k++;
 		}
 		
@@ -303,9 +320,12 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	case WM_DESTROY:
 		bShopOpen = false;
 		DeleteObject(hPen5);
+		DeleteObject(hBrushRed);
+		DeleteObject(hBrushGreen);
+		DeleteObject(hBrushBlue);
 		DeleteObject(hFont30);
 		DeleteObject(hFont50);
-		DeleteObject(hFont100);
+		DeleteObject(hFont80);
 		DestroyWindow(hWnd);
 		break;
 	default:
@@ -324,7 +344,7 @@ LRESULT CALLBACK WndProc_Barrier(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 	case WM_KEYDOWN:
 		break;
 	case WM_MOVE:
-		barrier->MovePos(POINT({ 1, 1 }));
+		barrier->MovePos(POS({ 1, 1 }));
 		break;
 	case WM_PAINT:
 	{

@@ -1,12 +1,13 @@
 #include "Game.h"
 
 std::vector <BulletObj* > bullets;
-std::vector<MobObj*> enemys;
+std::vector<EnemyObj*> enemys;
 Player* player;
 BarrierObj* barrier;
 RECT rtMapSize;
 
 clock_t nLastTime;
+POINT ptScreenSize;
 
 Object::Object(int size, double angle, double speed, POS pos)
 {
@@ -16,7 +17,7 @@ Object::Object(int size, double angle, double speed, POS pos)
 	_pos = pos;
 	_screenpos = { (LONG)pos.x ,(LONG)pos.y };
 }
-void Object::MoveAngleToDir(int deltatime)
+void Object::MoveToAngle(int deltatime)
 {
 	POS psPos = GetPos();
 	psPos.x += (double)(cos(_angle) * _speed)*SECOND(deltatime);
@@ -59,7 +60,7 @@ BulletObj::BulletObj(int damage, int speed, int size, double angle, POS pos):Obj
 }
 void BulletObj::RunOneFrame(int deltatime)
 {
-	MoveAngleToDir(deltatime);
+	MoveToAngle(deltatime);
 }
 
 
@@ -67,6 +68,7 @@ MobObj::MobObj(int hp, int damage, int size, double angle, double speed, POS pos
 {
 	_hp = hp;
 	_damage = damage;
+	_shield = 0;
 }
 
 
@@ -119,6 +121,11 @@ void Player::RunOneFrame(int deltatime)
 	rtMapSize.top -= MTop;
 	rtMapSize.right += MRight;
 	rtMapSize.bottom += MBottom;
+	
+	if (rtMapSize.top < 0)rtMapSize.top = 0;
+	if (rtMapSize.bottom > ptScreenSize.y)rtMapSize.bottom = ptScreenSize.y;
+	if (rtMapSize.left < 0)rtMapSize.left = 0;
+	if (rtMapSize.right > ptScreenSize.x)rtMapSize.right = ptScreenSize.x;
 
 	//Shot bullet
 	if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 && player->GetLasttime() <= 0) {
@@ -129,39 +136,100 @@ void Player::RunOneFrame(int deltatime)
 		player->SetLasttime(player->GetCooltime());
 	}
 
-	player->SetLasttime(player->GetLasttime() - 1);
+	player->SetLasttime(player->GetLasttime() - deltatime);
 	player->SetPos(psPlayer);
 }
 
 
 Enemy1::Enemy1(int hp, int damage, int size, double angle, double speed, POS pos)
-	:MobObj(hp, damage, size, angle, speed, pos)
-{}
+	:EnemyObj(hp, damage, size, angle, speed, pos)
+{
+	_maxtime = 1;
+}
 void Enemy1::RunOneFrame(int deltatime)
 {
 	POS psPlayer = player->GetPos();
-	SetAngle(atan2(-(_screenpos.y - psPlayer.y), -(_screenpos.x - psPlayer.x)));
-	MoveAngleToDir(deltatime);
+	SetAngle(atan2(-(GetPos().y - psPlayer.y), -(GetPos().x - psPlayer.x)));
+	MoveToAngle(deltatime);
+}
+
+Enemy2::Enemy2(int hp, int damage, int size, double angle, double speed, POS pos)
+	:EnemyObj(hp, damage, size, angle, speed, pos)
+{
+	_maxtime = 1;
+}
+void Enemy2::RunOneFrame(int deltatime)
+{
+	MoveToAngle(deltatime);
+}
+
+Enemy3::Enemy3(int hp, int damage, int size, double angle, double speed, POS pos)
+	:EnemyObj(hp, damage, size, angle, speed, pos)
+{
+	_maxtime = 1000;
+}
+void Enemy3::RunOneFrame(int deltatime)
+{
+	while (deltatime>0)
+	{
+		deltatime--;
+		_lasttime++;
+		_lasttime %= _maxtime;
+		if(_lasttime == 0) {
+			for (int i = 0; i < 360; i += 45) {
+				EnemyObj* p = new Enemy2(5, 1, 4, RADIAN(i), 7, GetPos());
+				enemys.push_back(p);
+			}
+		}
+		if (_lasttime % 50 == 0) {
+			Rotate(RADIAN(4.5));
+		}
+	}
+}
+void Enemy3::Draw(HDC hdc)
+{
+	POINT thispos = GetScreenPos();
+	POINT pos[5];
+	pos[0] = { -_size, -_size };
+	pos[1] = { -_size, _size };
+	pos[2] = { _size, _size };
+	pos[3] = { _size, -_size };
+	pos[4] = { -_size, -_size };
+	for (auto &i : pos) {
+		POINT p;
+		p.x = (i.x * cos(_angle)) - (i.y * sin(_angle));
+		p.y = (i.x * sin(_angle)) + (i.y * cos(_angle));
+		i = p;
+	}
+	MoveToEx(hdc, pos[0].x + thispos.x - rtMapSize.left, pos[0].y + thispos.y - rtMapSize.top, nullptr);
+	for (int i = 1; i <= 4; i++) {
+		LineTo(hdc, pos[i].x + thispos.x - rtMapSize.left, pos[i].y + thispos.y - rtMapSize.top);
+	}
+	for (auto &i : pos) {
+		POINT p;
+		p.x = (i.x * cos(RADIAN(45))) - (i.y * sin(RADIAN(45)));
+		p.y = (i.x * sin(RADIAN(45))) + (i.y * cos(RADIAN(45)));
+		i = p;
+	}
+	MoveToEx(hdc, pos[0].x + thispos.x - rtMapSize.left, pos[0].y + thispos.y - rtMapSize.top, nullptr);
+	for (int i = 1; i <= 4; i++) {
+		LineTo(hdc, pos[i].x + thispos.x - rtMapSize.left, pos[i].y + thispos.y - rtMapSize.top);
+	}
 }
 
 
-void BarrierObj::MovePos(POINT pos)
+void BarrierObj::MovePos(POS pos)
 {
-	_screenpos = pos;
-}
-bool BarrierObj::IsCollide(Object t)
-{
-	POINT tpos = t.GetScreenPos();
-	return (pow(abs((((_screenpos.x-_size/2<=tpos.x?2:0)|((_screenpos.x-_size/2>tpos.x||_screenpos.x+_size/2<tpos.x)?1:0))-2))*(_screenpos.x + _size*(((_screenpos.x-_size/2<=tpos.x?2:0)|((_screenpos.x-_size/2>tpos.x||_screenpos.x+_size/2<tpos.x)?1:0))-2) - tpos.x), 2)
-		+ pow(abs((((_screenpos.y-_size/2<=tpos.y?2:0)|((_screenpos.y-_size/2>tpos.y||_screenpos.y+_size/2<tpos.y)?1:0))-2))*(_screenpos.y + _size*(((_screenpos.y-_size/2<=tpos.y?2:0)|((_screenpos.y-_size/2>tpos.y||_screenpos.y+_size/2<tpos.y)?1:0))-2) - tpos.y), 2)
-		<= pow(t.GetR(),2)) ;
+	SetPos(pos);
 }
 bool BarrierObj::IsCollide(Object* t)
 {
 	
-	POINT tpos = t->GetScreenPos();
-	return (pow(abs((((_screenpos.x-_size/2<=tpos.x?2:0)|((_screenpos.x-_size/2>tpos.x||_screenpos.x+_size/2<tpos.x)?1:0))-2))*(_screenpos.x + _size*(((_screenpos.x-_size/2<=tpos.x?2:0)|((_screenpos.x-_size/2>tpos.x||_screenpos.x+_size/2<tpos.x)?1:0))-2) - tpos.x), 2)
-		+ pow(abs((((_screenpos.y-_size/2<=tpos.y?2:0)|((_screenpos.y-_size/2>tpos.y||_screenpos.y+_size/2<tpos.y)?1:0))-2))*(_screenpos.y + _size*(((_screenpos.y-_size/2<=tpos.y?2:0)|((_screenpos.y-_size/2>tpos.y||_screenpos.y+_size/2<tpos.y)?1:0))-2) - tpos.y), 2)
+	POS tpos = t->GetPos();
+	POS thispos = GetPos();
+
+	return (pow(abs((((thispos.x-_size/2<=tpos.x?2:0)|((thispos.x-_size/2>tpos.x|| thispos.x+_size/2<tpos.x)?1:0))-2))*(thispos.x + _size*(((thispos.x-_size/2<=tpos.x?2:0)|((thispos.x-_size/2>tpos.x|| thispos.x+_size/2<tpos.x)?1:0))-2) - tpos.x), 2)
+		+ pow(abs((((thispos.y-_size/2<=tpos.y?2:0)|((thispos.y-_size/2>tpos.y|| thispos.y+_size/2<tpos.y)?1:0))-2))*(thispos.y + _size*(((thispos.y-_size/2<=tpos.y?2:0)|((thispos.y-_size/2>tpos.y|| thispos.y+_size/2<tpos.y)?1:0))-2) - tpos.y), 2)
 		<= pow(t->GetR(),2));
 	
 	/*POINT tpos = t->GetScreenPos(), vertex;
@@ -207,8 +275,10 @@ void Init()
 {
 	srand(time(NULL));
 
-	player = new Player(10,10,R/5,0,10,1, {100,100});
+	player = new Player(10,10,R/5,0,100,100, {100,100});
 	nLastTime = clock();
+
+	ptScreenSize = { GetSystemMetrics(SM_CXFULLSCREEN), GetSystemMetrics(SM_CYFULLSCREEN) };
 }
 bool RunFrame()
 {
@@ -218,9 +288,12 @@ bool RunFrame()
 	for (auto i : bullets) {
 		i->RunOneFrame(deltatime);
 	}
+	for (int i = 0; i < enemys.size(); i++) {
+		enemys[i]->RunOneFrame(deltatime);
+	}/*
 	for (auto i : enemys) {
-		i->RunOneFrame(deltatime);
-	}
+ 		i->RunOneFrame(deltatime);
+	}*/
 
 	CheckCollision();
 	
@@ -292,7 +365,7 @@ void SpawnEnemy()
 	POS psEnemy = player->GetPos();
 	psEnemy.x += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
 	psEnemy.y += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
-	enemys.push_back(new Enemy1(1, 2, R / 2, 0, 10, psEnemy));
+	enemys.push_back((EnemyObj*)new Enemy3(1, 2, R / 2, 0, 10, psEnemy));
 }
 void DrawGame(HDC hdc, PAINTSTRUCT ps, RECT rtWindow)
 {
