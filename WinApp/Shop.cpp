@@ -1,10 +1,10 @@
 #include "Shop.h"
 
 extern Player* player;
+extern std::vector<BarrierObj*> barrier;
 
 std::vector<Shop*> shop;
 int ShopChoice[3];
-
 
 
 Shop::Shop(TCHAR* name, int maxcnt, int delta, void(*message)(Shop*), void(*upgrade)(Shop*))//TODO:_name ÃÊ±âÈ­
@@ -182,7 +182,7 @@ void AddBarrierMessage(Shop* subject)
 }
 void AddBarrierUpgrade(Shop* subject)
 {
-
+	barrier.push_back(new BarrierObj(1, 100, 100));
 }
 
 void Blank(Shop* subject)

@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <ctime>
-#include <stdlib.h>
+#include <cstdlib>
 
 #define UP 0
 #define DOWN 1
@@ -43,14 +43,16 @@ protected:
 
 public:
 	Object(int size, double angle, double speed, POS pos);
-	void MoveToAngle(int);
+	virtual ~Object() {};
 
+	void MoveToAngle(int);
 	void Rotate(double);
 	void SetAngle(double);
 
 	POINT GetScreenPos() { return _screenpos; }
 	POS GetPos() { return _pos; }
 	void SetPos(POS pos) { _pos = pos; _screenpos = { (LONG)pos.x ,(LONG)pos.y }; }
+	void SetPos(POINT pos) { _pos = { (double)pos.x, (double)pos.y }; _screenpos = pos; }
 	int GetSize() { return _size; }
 	int GetR() { return _size; }
 
@@ -58,7 +60,7 @@ public:
 	virtual bool IsCollide(Object*);
 	virtual void RunOneFrame(int);
 
-	virtual void Draw(HDC hdc);
+	virtual void Draw(HDC, RECT);
 };
 
 class BulletObj : public Object
@@ -129,20 +131,32 @@ public:
 //boss
 class Enemy3 : public EnemyObj
 {
+	HWND _hWnd;
 public:
-	Enemy3(int hp, int damage, int size, double angle, double speed, POS pos);
+	Enemy3( int hp, int damage, int size, double angle, double speed, POS pos);
+	~Enemy3();
 
+	HWND GethWnd() { return _hWnd; }
 	virtual void RunOneFrame(int)  override;
-
-	virtual void Draw(HDC hdc) override;
+	virtual void Draw(HDC, RECT) override;
 };
 
 class BarrierObj : public Object
 {
+	HWND _hwnd;
 	int _damage;
+	int _attackcooltime, _attacklasttime;
+	int _cnt;
 public:
-	void MovePos(POS);
-	bool IsCollide(Object*) override;
+	BarrierObj(int damage,int attackcooltime, int size);
+
+	int GetCnt() { return _cnt; }
+	int GetDamage() { return _damage; }
+	void SetDamage(int damage) { _damage = damage; }
+	HWND GetHwnd() { return _hwnd; }
+	virtual void RunOneFrame(int)  override;
+	virtual bool IsCollide(Object*) override;
+	virtual void Draw(HDC, RECT) override;
 };
 
 /*
@@ -163,4 +177,4 @@ void Init();
 bool RunFrame();
 void CheckCollision();
 void SpawnEnemy();
-void DrawGame(HDC, PAINTSTRUCT, RECT);
+void DrawGame(HDC,  RECT);

@@ -3,30 +3,20 @@
 
 #include "framework.h"
 #include "WinApp.h"
-#include "Game.h"
-#include "Shop.h"
-#include <stdio.h>
-#include <time.h>
-#include <cstdlib>
 
-#define MAX_LOADSTRING 100
+
 #define BUTTON_RESET 1001
 
 // 전역 변수:
-extern std::vector <BulletObj* > bullets;
-extern std::vector<EnemyObj*> enemys;
-extern Player* player;
-extern BarrierObj* barrier;
-extern RECT rtMapSize;
-extern std::vector<Shop*> shop;
-extern int ShopChoice[3];
 
-HINSTANCE hInst;                                // 현재 인스턴스입니다.
+
+extern HINSTANCE hInst;                                // 현재 인스턴스입니다.
+
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 WCHAR szWindowClass_Shop[MAX_LOADSTRING] = _T("game shop window");
 WCHAR szWindowClass_Barrier[MAX_LOADSTRING] = _T("game barrier window");
-BOOL bShopOpen = false;
+
 
 
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
@@ -81,7 +71,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	return (int) msg.wParam;
 }
 
-ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM, LPARAM), WCHAR* name)
+
+ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT(*WndProc)(HWND, UINT, WPARAM, LPARAM), WCHAR* name)
 {
 	WNDCLASSEXW wcex;
 
@@ -104,290 +95,48 @@ ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT (*WndProc)(HWND, UINT, WPARAM,
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
+	hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_POPUP|WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, 200,200, nullptr, nullptr, hInstance, nullptr);
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_POPUP | WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, 200, 200, nullptr, nullptr, hInstance, nullptr);
 
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
-}
-BOOL InitInstance_Shop(HINSTANCE hInstance, int nCmdShow)
-{
-	HWND hWnd = CreateWindowW(szWindowClass_Shop, szTitle, WS_POPUP|WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
-	CW_USEDEFAULT, 0, 1200,900, nullptr, nullptr, hInstance, nullptr);
-	
 	if (!hWnd)
 	{
 		return FALSE;
 	}
-	
+
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
-	
+
 	return TRUE;
 }
-
-//Frame Func
-void UpdateFrame(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
+BOOL InitInstance_Shop(HINSTANCE hInstance, int nCmdShow)
 {
-    GetWindowRect(hWnd, &rtMapSize);
+	HWND hWnd = CreateWindowW(szWindowClass_Shop, szTitle, WS_POPUP | WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, 1200, 900, nullptr, nullptr, hInstance, nullptr);
 
-    RunFrame();
-    
-    MoveWindow(hWnd, rtMapSize.left, rtMapSize.top, rtMapSize.right - rtMapSize.left, rtMapSize.bottom - rtMapSize.top, true);
+	if (!hWnd)
+	{
+		return FALSE;
+	}
+
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
+
+	return TRUE;
 }
-
-void MobSpawn(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
+HWND InitInstance_Barrier(HINSTANCE hInstance, int size, int nCmdShow)
 {
-	SpawnEnemy();
-}
+	HWND hWnd = CreateWindowW(szWindowClass_Barrier, szTitle, WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
+		200-(size + 100)/2, 200-(size + 100)/2, size+100, size+100, nullptr, nullptr, hInstance, nullptr);
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-    case WM_CREATE:
-        SetTimer(hWnd, 1, 1, (TIMERPROC)UpdateFrame);
-        SetTimer(hWnd, 2, 5000, (TIMERPROC)MobSpawn);
-        Init();
-        InitShop();
-        break;
-    case WM_KEYDOWN:
-        switch (wParam)
-        {
-        case 0x50:
-        case 0x70:
-			if (!bShopOpen){
-                InitInstance_Shop(hInst, 10);
-			    bShopOpen = true;
-            }
-            break;
-        }
-        break;
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
-
-        RECT rtWindow;
-        GetWindowRect(hWnd, &rtWindow);
-		RECT rtText;
-		HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
-		GetClientRect(hWnd, &rtText);
-		HGDIOBJ oldfont = SelectObject(hdc, font);
-		TCHAR thp[MAXLENGTH] = _T("HP:");
-		_tcscat(thp, INTTOCHAR(player->GetHp()));
-		DrawText(hdc, thp, -1, &rtText, DT_TOP || DT_LEFT);
-		SelectObject(hdc, oldfont);
-		DeleteObject(font);
-
-		DrawGame(hdc, ps, rtWindow);
-
-        EndPaint(hWnd, &ps);
-        break;
-    }
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
-LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	HWND hB1;
-	static HFONT hFont80,hFont50,hFont30;
-	static HBRUSH hBrushRed, hBrushGreen, hBrushBlue;
-	static HPEN hPen5;
-	static int scroll=0;
-	switch (message)
+	if (!hWnd)
 	{
-	case WM_CREATE:
-		hPen5 = CreatePen(PS_SOLID, 5, RGB(0, 0, 0));
-		hBrushRed = CreateSolidBrush(RGB(255, 0, 0));
-		hBrushGreen = CreateSolidBrush(RGB(0, 255, 0));
-		hBrushBlue = CreateSolidBrush(RGB(0, 0, 255));
-		hFont80 = CreateFont(80, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
-		hFont50 = CreateFont(50, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
-		hFont30 = CreateFont(30, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
-		UpdateShopChoice();	
-		break;
-	case WM_KEYDOWN:
-		switch (wParam)
-		{
-		case 0x1B:
-		case 0x50:
-		case 0x70:
-			bShopOpen = false;
-			DestroyWindow(hWnd);
-			break;
-		}
-		break;
-	case WM_LBUTTONDOWN:
-	{
-		POINT pt;
-		pt.x = LOWORD(lParam);
-		pt.y = HIWORD(lParam);
-		
-		RECT rtwindow;
-		GetClientRect(hWnd, &rtwindow);
-
-		int k=0, windowcenter = rtwindow.right/2;
-		for(int i : ShopChoice){
-			int center = windowcenter + (k-1)*(SHOPWIDTH + SHOPGAP);
-			if (IsCollideInRoundRectangle(pt.x, pt.y, { center - SHOPWIDTH / 2 , 150, center + SHOPWIDTH / 2 ,700}, SHOPCURVE)) {
-				shop[i]->Upgrade();
-				ShopChoice[k] = SHOPLENGTH;
-				InvalidateRect(hWnd, nullptr, TRUE);
-
-				return 0;
-			}
-			k++;
-		}
-
-		UpdateShopChoice();
-		InvalidateRect(hWnd, nullptr, TRUE);
-		
-		break; //"break;" is out of parentheses in window example code
+		return nullptr;
 	}
-	case WM_PAINT:
-	{
-		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hWnd, &ps);
-		RECT TextArea;
 
-		HPEN hOldPen;
-		HFONT hOldFont;
-		HBRUSH hOldBrush;
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
 
-		GetClientRect(hWnd, &TextArea);
-	
-		hOldFont = (HFONT)SelectObject(hdc, hFont80);
-		DrawText(hdc, _T("Upgrade"), -1, &TextArea, DT_CENTER);
-		
-		int k=0, windowcenter = TextArea.right/2;
-		for(int i : ShopChoice){
-			int scnt = shop[i]->GetCnt();
-			int smaxcnt = shop[i]->GetMaxcnt();
-			int center = windowcenter + (k-1)*(SHOPWIDTH + SHOPGAP);
-			int barwidth = smaxcnt != 0 ? (SHOPWIDTH/2)/smaxcnt : 0;
-
-			//square
-			hOldPen = (HPEN)SelectObject(hdc, hPen5);
-			//hOldPen = (HPEN)SelectObject(hdc, GetStockObject(DC_PEN));
-			if(i == SHOPLENGTH+1)SetDCPenColor(hdc, RGB(50, 50, 50));
-			else SetDCPenColor(hdc, RGB(0, 255, 0));
-			DrawRoundRectangle(hdc, { center-SHOPWIDTH/2,150,center+SHOPWIDTH/2,700 }, SHOPCURVE);
-			SelectObject(hdc, hOldPen);
-			
-			//text
-			SelectObject(hdc, hFont50);
-			TextArea = {center-SHOPWIDTH/2, 200, center+SHOPWIDTH/2, 250};
-			DrawText(hdc, shop[i]->GetName(), -1, &TextArea, DT_CENTER);
-			SelectObject(hdc, hFont30);
-			TextArea = {center-SHOPWIDTH/2, 350, center+SHOPWIDTH/2, 550};
-			DrawText(hdc, shop[i]->GetDescription(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
-			TextArea = {center-SHOPWIDTH/2, 600, center+SHOPWIDTH/2, 700};
-			DrawText(hdc, shop[i]->GetDetail(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
-			SelectObject(hdc, hOldFont);
-			
-			//bar
-			hOldBrush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
-			for (int j = 0; j<smaxcnt; j++) {
-				if(j<scnt)SelectObject(hdc, hBrushGreen);
-				else if(j==scnt)SelectObject(hdc, hBrushBlue);
-				else SelectObject(hdc, hBrushRed);
-				Rectangle(hdc, center - smaxcnt*barwidth/2 + j*barwidth, 260, center - smaxcnt*barwidth/2 + (j+1)*barwidth, 270);
-			}
-			SetDCBrushColor(hdc, RGB(255, 255, 255));
-			SelectObject(hdc, hOldBrush);
-			
-			k++;
-		}
-		
-		EndPaint(hWnd, &ps);
-		break;
-	}
-	case WM_DESTROY:
-		bShopOpen = false;
-		DeleteObject(hPen5);
-		DeleteObject(hBrushRed);
-		DeleteObject(hBrushGreen);
-		DeleteObject(hBrushBlue);
-		DeleteObject(hFont30);
-		DeleteObject(hFont50);
-		DeleteObject(hFont80);
-		DestroyWindow(hWnd);
-		break;
-	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
-	}
-	return 0;
-}
-LRESULT CALLBACK WndProc_Barrier(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	static HBRUSH hBrush;
-	switch (message)
-	{
-	case WM_CREATE:
-		hBrush = CreateHatchBrush(HS_BDIAGONAL, RGB(255, 0, 0));
-		break;
-	case WM_KEYDOWN:
-		break;
-	case WM_MOVE:
-		barrier->MovePos(POS({ 1, 1 }));
-		break;
-	case WM_PAINT:
-	{
-		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hWnd, &ps);
-	
-		POINT pos = barrier->GetScreenPos();
-		int r = barrier->GetR();
-	
-		HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
-		SetDCPenColor(hdc, RGB(255, 0, 0));
-		Rectangle(hdc, pos.x - r/2, pos.y - r/2, pos.x + r / 2, pos.y + r / 2);
-		SelectObject(hdc, hOldBrush);
-	
-		//Not End
-		EndPaint(hWnd, &ps);
-		break;
-	}
-	case WM_DESTROY:
-		DestroyWindow(hWnd);
-		break;
-	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
-	}
-	return 0;
-}
-
-
-// 정보 대화 상자의 메시지 처리기입니다.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-		{
-		    EndDialog(hDlg, LOWORD(wParam));
-		    return (INT_PTR)TRUE;
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
+	return hWnd;
 }

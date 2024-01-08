@@ -2,6 +2,7 @@
 
 #include "WinApp.h"
 #include "Game.h"
+#include <vector>
 #include <time.h>
 #include <cmath>
 #include <cstdlib>

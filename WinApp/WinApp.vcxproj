@@ -133,11 +133,13 @@
     <ClInclude Include="Shop.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WinApp.h" />
+    <ClInclude Include="WinProc.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Shop.cpp" />
     <ClCompile Include="WinApp.cpp" />
+    <ClCompile Include="WInProc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WinApp.rc" />

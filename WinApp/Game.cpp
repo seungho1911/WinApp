@@ -1,13 +1,17 @@
 #include "Game.h"
+#include "WinProc.h"
 
 std::vector <BulletObj* > bullets;
 std::vector<EnemyObj*> enemys;
 Player* player;
-BarrierObj* barrier;
-RECT rtMapSize;
+std::vector<BarrierObj*> barrier;
+RECT rtMainScreen;
 
 clock_t nLastTime;
 POINT ptScreenSize;
+
+extern HINSTANCE hInst;
+extern std::vector<HWND> hWnds;
 
 Object::Object(int size, double angle, double speed, POS pos)
 {
@@ -48,8 +52,12 @@ void Object::RunOneFrame(int deltatime)
 {
 	throw "임시";
 }
-void Object::Draw(HDC hdc)
+void Object::Draw(HDC hdc, RECT rtMapSize)
 {
+	if ((_screenpos.x - _size) < rtMapSize.left)return;
+	if ((_screenpos.y - _size) < rtMapSize.top)return;
+	if ((_screenpos.x + _size) > rtMapSize.right)return;
+	if ((_screenpos.y + _size) > rtMapSize.bottom)return;
 	Ellipse(hdc, (_screenpos.x - _size) - rtMapSize.left, (_screenpos.y - _size) - rtMapSize.top, (_screenpos.x + _size) - rtMapSize.left, (_screenpos.y + _size) - rtMapSize.top);
 }
 
@@ -100,32 +108,32 @@ void Player::RunOneFrame(int deltatime)
 	//wall collsion check
 	int MLeft = -1, MRight = -1, MTop = -1, MBottom = -1; //TODO:변수명
 
-	if (psPlayer.x - _size < rtMapSize.left) {
-		MLeft = +rtMapSize.left - (psPlayer.x - _size);
+	if (psPlayer.x - _size < rtMainScreen.left) {
+		MLeft = +rtMainScreen.left - (psPlayer.x - _size);
 		psPlayer.x += MLeft - 1;
 	}
-	if (psPlayer.x + _size > rtMapSize.right) {
-		MRight = (psPlayer.x + _size) - rtMapSize.right;
+	if (psPlayer.x + _size > rtMainScreen.right) {
+		MRight = (psPlayer.x + _size) - rtMainScreen.right;
 		psPlayer.x -= MRight - 1;
 	}
-	if (psPlayer.y - _size < rtMapSize.top) {
-		MTop = rtMapSize.top - (psPlayer.y - _size);
+	if (psPlayer.y - _size < rtMainScreen.top) {
+		MTop = rtMainScreen.top - (psPlayer.y - _size);
 		psPlayer.y += MTop - 1;
 	}
-	if (psPlayer.y + _size > rtMapSize.bottom) {
-		MBottom = (psPlayer.y + _size) - rtMapSize.bottom;
+	if (psPlayer.y + _size > rtMainScreen.bottom) {
+		MBottom = (psPlayer.y + _size) - rtMainScreen.bottom;
 		psPlayer.y -= MBottom - 1;
 	}
 
-	rtMapSize.left -= MLeft;
-	rtMapSize.top -= MTop;
-	rtMapSize.right += MRight;
-	rtMapSize.bottom += MBottom;
+	rtMainScreen.left -= MLeft;
+	rtMainScreen.top -= MTop;
+	rtMainScreen.right += MRight;
+	rtMainScreen.bottom += MBottom;
 	
-	if (rtMapSize.top < 0)rtMapSize.top = 0;
-	if (rtMapSize.bottom > ptScreenSize.y)rtMapSize.bottom = ptScreenSize.y;
-	if (rtMapSize.left < 0)rtMapSize.left = 0;
-	if (rtMapSize.right > ptScreenSize.x)rtMapSize.right = ptScreenSize.x;
+	if (rtMainScreen.top < 0)rtMainScreen.top = 0;
+	if (rtMainScreen.bottom > ptScreenSize.y)rtMainScreen.bottom = ptScreenSize.y;
+	if (rtMainScreen.left < 0)rtMainScreen.left = 0;
+	if (rtMainScreen.right > ptScreenSize.x)rtMainScreen.right = ptScreenSize.x;
 
 	//Shot bullet
 	if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 && player->GetLasttime() <= 0) {
@@ -167,7 +175,44 @@ Enemy3::Enemy3(int hp, int damage, int size, double angle, double speed, POS pos
 	:EnemyObj(hp, damage, size, angle, speed, pos)
 {
 	_maxtime = 1000;
+
+
+	WNDCLASSEXW wcex;
+	wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc_BOSS;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInst;
+	wcex.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_WINAPP));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = NULL;//MAKEINTRESOURCEW(IDC_WINAPP);
+	wcex.lpszClassName = _T("BOSS");
+	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	RegisterClassExW(&wcex);
+
+
+	POINT ptscreen = GetScreenPos();
+	_hWnd = CreateWindowW(_T("BOSS"), _T("BOSS"), WS_POPUP | WS_VISIBLE,
+		ptscreen.x-100, ptscreen.y-100, 200, 200, nullptr, nullptr, hInst, nullptr);
+	if (!_hWnd)
+	{
+		throw("BOSS ERROR");
+	}
+
+	ShowWindow(_hWnd, 10);
+	UpdateWindow(_hWnd);
 }
+Enemy3::~Enemy3()
+{
+	for (auto i = hWnds.begin(); i != hWnds.end();) {
+		if (*i == _hWnd)i = hWnds.erase(i);
+		else ++i;
+	}
+	SendMessage(_hWnd, WM_CLOSE, 0, 0);
+}
+
 void Enemy3::RunOneFrame(int deltatime)
 {
 	while (deltatime>0)
@@ -186,7 +231,7 @@ void Enemy3::RunOneFrame(int deltatime)
 		}
 	}
 }
-void Enemy3::Draw(HDC hdc)
+void Enemy3::Draw(HDC hdc, RECT rtWindow)
 {
 	POINT thispos = GetScreenPos();
 	POINT pos[5];
@@ -201,9 +246,9 @@ void Enemy3::Draw(HDC hdc)
 		p.y = (i.x * sin(_angle)) + (i.y * cos(_angle));
 		i = p;
 	}
-	MoveToEx(hdc, pos[0].x + thispos.x - rtMapSize.left, pos[0].y + thispos.y - rtMapSize.top, nullptr);
+	MoveToEx(hdc, pos[0].x + thispos.x - rtWindow.left, pos[0].y + thispos.y - rtWindow.top, nullptr);
 	for (int i = 1; i <= 4; i++) {
-		LineTo(hdc, pos[i].x + thispos.x - rtMapSize.left, pos[i].y + thispos.y - rtMapSize.top);
+		LineTo(hdc, pos[i].x + thispos.x - rtWindow.left, pos[i].y + thispos.y - rtWindow.top);
 	}
 	for (auto &i : pos) {
 		POINT p;
@@ -211,16 +256,26 @@ void Enemy3::Draw(HDC hdc)
 		p.y = (i.x * sin(RADIAN(45))) + (i.y * cos(RADIAN(45)));
 		i = p;
 	}
-	MoveToEx(hdc, pos[0].x + thispos.x - rtMapSize.left, pos[0].y + thispos.y - rtMapSize.top, nullptr);
+	MoveToEx(hdc, pos[0].x + thispos.x - rtWindow.left, pos[0].y + thispos.y - rtWindow.top, nullptr);
 	for (int i = 1; i <= 4; i++) {
-		LineTo(hdc, pos[i].x + thispos.x - rtMapSize.left, pos[i].y + thispos.y - rtMapSize.top);
+		LineTo(hdc, pos[i].x + thispos.x - rtWindow.left, pos[i].y + thispos.y - rtWindow.top);
 	}
 }
 
-
-void BarrierObj::MovePos(POS pos)
+BarrierObj::BarrierObj(int damage, int attackcooltime, int size)
+	:Object(size, 0, 0, {200, 200}) //pos modify
 {
-	SetPos(pos);
+	_hwnd = InitInstance_Barrier(hInst, size, 10);
+	_damage = damage;
+	_attackcooltime = attackcooltime;
+	_attacklasttime = 0;
+	_cnt = 0;
+}
+void BarrierObj::RunOneFrame(int deltatime)
+{
+	_attacklasttime += deltatime;
+	_cnt += _attacklasttime / _attackcooltime;
+	_attacklasttime %= _attackcooltime;
 }
 bool BarrierObj::IsCollide(Object* t)
 {
@@ -269,7 +324,12 @@ bool BarrierObj::IsCollide(Object* t)
 	long long int dis = (vertex.x - tpos.x) * (vertex.x - tpos.x) + (vertex.y - tpos.y) * (vertex.y - tpos.y);
 	return dis <= (t->GetR());*/
 }
-
+void BarrierObj::Draw(HDC hdc, RECT rtWindow)
+{
+	POINT thispos = GetScreenPos();
+	Rectangle(hdc, thispos.x - rtWindow.left - _size / 2, thispos.y - rtWindow.top - _size / 2, 
+				   thispos.x - rtWindow.left + _size / 2, thispos.y - rtWindow.top + _size / 2);
+}
 
 void Init()
 {
@@ -282,6 +342,7 @@ void Init()
 }
 bool RunFrame()
 {
+	printf("%d\n", enemys.size());
 	int deltatime = clock() - nLastTime;
 
 	player->RunOneFrame(deltatime);
@@ -294,6 +355,9 @@ bool RunFrame()
 	for (auto i : enemys) {
  		i->RunOneFrame(deltatime);
 	}*/
+	for (auto i : barrier) {
+ 		i->RunOneFrame(deltatime);
+	}
 
 	CheckCollision();
 	
@@ -320,39 +384,47 @@ void CheckCollision()
 		DELETEINVECTOR(enemys)
 	}
 	DELETEINVECTOR(bullets)
-	for (auto& i : enemys) {
-		if (i->IsCollide(player)) {
-			int hp = player->GetHp();
-			player->SetHp(hp - (i->GetDamage()));
-			delete i;
-			i = nullptr;
+	for (auto& i : barrier) {
+		for (auto& j : enemys) {
+			if (i->IsCollide(j)) {
+				int hp = j->GetHp();
+				j->SetHp(hp - i->GetDamage() * i->GetCnt());
+				delete i;
+				i = nullptr;
+				if (j->GetHp() <= 0) {
+					delete j;
+					j = nullptr;
+				}
+				break;
+			}
 		}
+		DELETEINVECTOR(enemys)
 	}
-	DELETEINVECTOR(enemys)
+	DELETEINVECTOR(barrier)
 	for (auto& i : bullets) {
 		POINT ptBullet = i->GetScreenPos();
 		int size = i->GetSize();
 		int damage = i->GetDamage();
-		if (ptBullet.x - size < rtMapSize.left) {
-			rtMapSize.left -= damage;
+		if (ptBullet.x - size < rtMainScreen.left) {
+			rtMainScreen.left -= damage;
 			delete i;
 			i = nullptr;
 			continue;
 		}
-		if (ptBullet.x + size > rtMapSize.right) {
-			rtMapSize.right += damage;
+		if (ptBullet.x + size > rtMainScreen.right) {
+			rtMainScreen.right += damage;
 			delete i;
 			i = nullptr;
 			continue;
 		}
-		if (ptBullet.y - size < rtMapSize.top) {
-			rtMapSize.top -= damage;
+		if (ptBullet.y - size < rtMainScreen.top) {
+			rtMainScreen.top -= damage;
 			delete i;
 			i = nullptr;
 			continue;
 		}
-		if (ptBullet.y + size > rtMapSize.bottom) {
-			rtMapSize.bottom += damage;
+		if (ptBullet.y + size > rtMainScreen.bottom) {
+			rtMainScreen.bottom += damage;
 			delete i;
 			i = nullptr;
 			continue;
@@ -365,23 +437,23 @@ void SpawnEnemy()
 	POS psEnemy = player->GetPos();
 	psEnemy.x += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
 	psEnemy.y += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
-	enemys.push_back((EnemyObj*)new Enemy3(1, 2, R / 2, 0, 10, psEnemy));
+	//enemys.push_back((EnemyObj*)new Enemy3(1, 2, R / 2, 0, 10, psEnemy));
 }
-void DrawGame(HDC hdc, PAINTSTRUCT ps, RECT rtWindow)
+void DrawGame(HDC hdc, RECT rtWindow)
 {
 	HPEN myPen = CreatePen(PS_SOLID, 7, RGB(0, 255, 0));
 	HGDIOBJ oldPen = SelectObject(hdc, myPen);
 	
 
-	player->Draw(hdc);
+	player->Draw(hdc, rtWindow);
 
 	SelectObject(hdc, oldPen);
 	DeleteObject(myPen);
 
 	for (auto i : enemys) {
-		i->Draw(hdc);
+		i->Draw(hdc, rtWindow);
 	}
 	for (auto i : bullets) {
-		i->Draw(hdc);
+		i->Draw(hdc, rtWindow);
 	}
 }
