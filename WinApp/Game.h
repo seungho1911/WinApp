@@ -16,9 +16,8 @@
 #define R 50
 #define SPEED 10
 #define MAXLENGTH 80
-#define SHOPLENGTH 4
 
-#define DELETEINVECTOR(V) for (auto P = (V).begin(); P != (V).end();) {if (*P == nullptr)P = (V).erase(P);else ++P;}
+#define DELETEINVECTOR(V) for (auto P = (V).begin(); P != (V).end();) {if ((*P)->GetHp()<=0)delete *P,P = (V).erase(P);else ++P;}
 #define SECOND(N) (N)/100.0
 
 #define INTTOCHAR(N) [](int n) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%d"), n); return tchar;}(N)
@@ -27,6 +26,7 @@
 
 #define PI 3.1415926
 #define RADIAN(X) (X) * PI / 180
+#define INF 2000000000
 
 
 struct POS { double x, y; };
@@ -52,27 +52,23 @@ public:
 	POINT GetScreenPos() { return _screenpos; }
 	POS GetPos() { return _pos; }
 	void SetPos(POS pos) { _pos = pos; _screenpos = { (LONG)pos.x ,(LONG)pos.y }; }
-	void SetPos(POINT pos) { _pos = { (double)pos.x, (double)pos.y }; _screenpos = pos; }
 	int GetSize() { return _size; }
 	int GetR() { return _size; }
 
-	virtual bool IsCollide(Object);
 	virtual bool IsCollide(Object*);
-	virtual void RunOneFrame(int);
+	virtual void RunOneFrame(int) = 0;
 
 	virtual void Draw(HDC, RECT);
 };
 
-class BulletObj : public Object
+
+class ExpObj : public Object
 {
-	int _damage;
 public:
-	BulletObj(int damage, int speed, int size, double angle, POS pos);
-
-	int GetDamage() { return _damage; }
-
+	ExpObj(int xp, POS pos);
 	virtual void RunOneFrame(int) override;
 };
+
 
 class MobObj : public Object
 {
@@ -87,19 +83,50 @@ public:
 	void SetDamage(int damage) { _damage = damage; }
 	int GetHp() { return _hp; }
 	void SetHp(int hp) { _hp = hp; }
+	int GetShield() { return _shield; }
+	void Attacked(int damage)
+	{
+		if(_shield > damage){
+			_shield -= damage;
+			damage = 0;
+		}
+		else{
+			damage -= _shield;
+			_shield = 0;
+		}
+		_hp -= damage;
+		if( _hp <= 0 )Kill();
+	}
+	void Kill() { _hp = -1; }
+
+};
+
+
+class BulletObj : public MobObj
+{
+public:
+	BulletObj(int hp, int damage, int size, double angle, double speed, POS pos);
+
+	int GetDamage() { return _damage; }
+
+	virtual void RunOneFrame(int) override;
 };
 
 class Player : public MobObj
 {
 	int _bulletcooltime, _bulletlasttime;//총알 발사 쿨
+	int _shieldcooltime, _shieldlasttime;
 	//TODO:게임 관련 변수들 추가
 public:
 	Player(int hp, int damage, int size, double angle, double speed, int cooltime, POS pos);
 
 	int GetCooltime() { return _bulletcooltime; }
 	int GetLasttime() { return _bulletlasttime; }
-	void SetCooltime(double cooltime) { _bulletcooltime = cooltime; }
+	void SetCooltime(int cooltime) { _bulletcooltime = cooltime; }
+	void SetSCooltime(int cooltime) { _shieldcooltime = cooltime; }
 	void SetLasttime(int lasttime) { _bulletlasttime = lasttime; }
+	void AddDeltaTime(int deltatime);
+	void ChargeShield();
 	
 	virtual void RunOneFrame(int) override;
 };
@@ -141,22 +168,43 @@ public:
 	virtual void Draw(HDC, RECT) override;
 };
 
+//Laser
+class Enemy4 : public EnemyObj
+{
+public:
+	Enemy4(int hp, int damage, int dummysize, double angle, double dummylength, POS pos);
+	virtual void RunOneFrame(int)  override;
+	virtual void Draw(HDC hdc, RECT rtWindow);
+	virtual bool IsCollide(Object*);
+};
+
+
 class BarrierObj : public Object
 {
-	HWND _hwnd;
-	int _damage;
-	int _attackcooltime, _attacklasttime;
-	int _cnt;
+	HWND _hWnd;
 public:
-	BarrierObj(int damage,int attackcooltime, int size);
+	BarrierObj(POS pos);
 
-	int GetCnt() { return _cnt; }
-	int GetDamage() { return _damage; }
-	void SetDamage(int damage) { _damage = damage; }
-	HWND GetHwnd() { return _hwnd; }
+	HWND GetHwnd() { return _hWnd; }
 	virtual void RunOneFrame(int)  override;
 	virtual bool IsCollide(Object*) override;
 	virtual void Draw(HDC, RECT) override;
+};
+
+class BarrierStats
+{
+	int _size;
+	int _damage;
+	int _attackcooltime, _attacklasttime;
+	int _cnt; 
+public:
+	BarrierStats(int damage, int attackcooltime, int size);
+
+	int GetCnt() { return _cnt; }
+	int GetSize() { return _size; }
+	int GetDamage() { return _damage; }
+	void SetDamage(int damage) { _damage = damage; }
+	void RunOneFrame(int);
 };
 
 /*

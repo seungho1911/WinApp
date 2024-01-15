@@ -23,12 +23,8 @@ WCHAR szWindowClass_Barrier[MAX_LOADSTRING] = _T("game barrier window");
 ATOM                MyRegisterClass(HINSTANCE, LRESULT(*)(HWND, UINT, WPARAM, LPARAM), WCHAR*);
 BOOL                InitInstance(HINSTANCE, int);
 BOOL                InitInstance_Shop(HINSTANCE, int);
-BOOL                InitInstance_Barrier(HINSTANCE, int);
+BOOL                InitInstance_Barrier(HINSTANCE, int, int);
 
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK    WndProc_Shop(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK    WndProc_Barrier(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -125,10 +121,12 @@ BOOL InitInstance_Shop(HINSTANCE hInstance, int nCmdShow)
 
 	return TRUE;
 }
-HWND InitInstance_Barrier(HINSTANCE hInstance, int size, int nCmdShow)
+HWND InitInstance_Barrier(HINSTANCE hInstance, POS pos, int size, int nCmdShow)
 {
+	RECT rt = {0, 0, size+100, size+100};
+	AdjustWindowRect(&rt, WS_OVERLAPPEDWINDOW, FALSE);
 	HWND hWnd = CreateWindowW(szWindowClass_Barrier, szTitle, WS_VISIBLE,//WS_OVERLAPPEDWINDOW,
-		200-(size + 100)/2, 200-(size + 100)/2, size+100, size+100, nullptr, nullptr, hInstance, nullptr);
+		(int)pos.x - (size/2 + 50) + rt.left, (int)pos.y - (size / 2 + 50) + rt.top, rt.right-rt.left, rt.bottom-rt.top, nullptr, nullptr, hInstance, nullptr);
 
 	if (!hWnd)
 	{
@@ -137,6 +135,7 @@ HWND InitInstance_Barrier(HINSTANCE hInstance, int size, int nCmdShow)
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
+	
 
 	return hWnd;
 }

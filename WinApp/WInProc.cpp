@@ -5,7 +5,8 @@ extern std::vector <BulletObj* > bullets;
 extern std::vector<EnemyObj*> enemys;
 extern Player* player;
 extern RECT rtMainScreen;
-extern std::vector<BarrierObj*> barrier;
+extern BarrierStats* barrier;
+extern std::vector <BarrierObj*> barriers;
 extern std::vector<Shop*> shop;
 extern int ShopChoice[3];
 
@@ -20,7 +21,8 @@ void UpdateFrame(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 
 	RunFrame();
 
-	MoveWindow(hWnd, rtMainScreen.left, rtMainScreen.top, rtMainScreen.right - rtMainScreen.left, rtMainScreen.bottom - rtMainScreen.top, true);
+	MoveWindow(hWnd, rtMainScreen.left, rtMainScreen.top, rtMainScreen.right - rtMainScreen.left, rtMainScreen.bottom - rtMainScreen.top, false);
+	InvalidateRect(hWnd, nullptr, false);
 }
 
 void MobSpawn(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
@@ -31,7 +33,6 @@ void MobSpawn(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 
 	//설정
 	enemys.push_back((EnemyObj*)new Enemy3(1, 2, R / 2, 0, 10, psEnemy));
-	hWnds.push_back(((Enemy3*)enemys.back())->GethWnd());
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -59,27 +60,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hWnd, &ps);
+		HDC hMaindc = BeginPaint(hWnd, &ps);
 
-		RECT rtWindow;
-		GetWindowRect(hWnd, &rtWindow);
-		RECT rtText;
+		GrapicBuffer GBMain = GrapicBuffer(hWnd, hMaindc);
+		HDC hdc = GBMain.GetHDC();
+
 		HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
-		GetClientRect(hWnd, &rtText);
 		HGDIOBJ oldfont = SelectObject(hdc, font);
 		TCHAR thp[MAXLENGTH] = _T("HP:");
 		_tcscat(thp, INTTOCHAR(player->GetHp()));
-		DrawText(hdc, thp, -1, &rtText, DT_TOP || DT_LEFT);
+		_tcscat(thp, _T(" + "));
+		_tcscat(thp, INTTOCHAR(player->GetShield()));
+		DrawText(hdc, thp, -1, GBMain.GetClientRECT(), DT_TOP || DT_LEFT);
 		SelectObject(hdc, oldfont);
 		DeleteObject(font);
 
-		DrawGame(hdc, rtWindow);
+		DrawGame(hdc, *GBMain.GetWindowRECT());
+		
 		for (auto i : hWnds) {
-			RECT rtwindow;
-			GetClientRect(i, &rtwindow);
-			RedrawWindow(i, NULL, NULL, RDW_INVALIDATE|RDW_UPDATENOW| RDW_ERASE);
+			GrapicBuffer GB = GrapicBuffer(i);
+			DrawGame(GB.GetHDC(), *GB.GetWindowRECT());
 		}
-
+		printf("%d\n", enemys.size());
+		GBMain.EndPaint();
 		EndPaint(hWnd, &ps);
 		break;
 	}
@@ -248,38 +251,39 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 }
 LRESULT CALLBACK WndProc_Barrier(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	static HBRUSH hBrush;
-	std::vector<BarrierObj*>::iterator t= barrier.begin();
-	for (t = barrier.begin(); t != barrier.end() && (*t)->GetHwnd() != hWnd; t++);
-
+	/*static HBRUSH hBrush;
+	Object* tar = nullptr;
+	if (message!=WM_CREATE&&barriers.find(hWnd) != barriers.end())tar = (barriers.find(hWnd))->second;
+	//else tar = (barriers.insert({ hWnd, new Object(100, 0, 0, {500,500}) }).first)->second;
+	else throw("tar is null");*/
+	
 	switch (message)
 	{
-	case WM_CREATE:
+	/*case WM_CREATE:
 		hBrush = CreateHatchBrush(HS_BDIAGONAL, RGB(255, 0, 0));
-		break;
-	case WM_MOVE:
+		barriers.insert({ hWnd, new Object(100, 0, 0, {500,500}) });
+		//hWnds.push_back(hWnd);
+		break;*/
+	/*case WM_MOVE:
 	{
 		POINT pos = { (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam) };
-		(*t)->SetPos(pos);
+		tar->SetPos(pos);
 		break;
-	}
-	case WM_PAINT:
+	}*/
+	/*case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 		
-		POINT pos = (*t)->GetScreenPos();
-		int r = (*t)->GetR();
-
 		HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 		SetDCPenColor(hdc, RGB(255, 0, 0));
-		(*t)->Draw(hdc, {0,0,0,0});
+		barrier->Draw(hdc);
 		SelectObject(hdc, hOldBrush);
 		
 		//Not End
 		EndPaint(hWnd, &ps);
 		break;
-	}
+	}*/
 	case WM_DESTROY:
 		DestroyWindow(hWnd);
 		break;

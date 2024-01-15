@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdlib>
 
+#define SHOPLENGTH 5
 #define SHOPWIDTH 300
 #define SHOPGAP 20
 #define SHOPCURVE 50
@@ -45,4 +46,6 @@ void ShotReloadMessage(Shop*);
 void ShotReloadUpgrade(Shop*);
 void AddBarrierMessage(Shop*);
 void AddBarrierUpgrade(Shop*);
+void AddShieldMessage(Shop*);
+void AddShieldUpgrade(Shop*);
 void Blank(Shop*);

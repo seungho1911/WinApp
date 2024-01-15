@@ -1,7 +1,10 @@
 #include "Shop.h"
 
 extern Player* player;
-extern std::vector<BarrierObj*> barrier;
+extern BarrierStats* barrier;
+extern std::vector <BarrierObj*> barriers;
+
+extern HINSTANCE hInst;
 
 std::vector<Shop*> shop;
 int ShopChoice[3];
@@ -68,7 +71,10 @@ void InitShop()
 	_tcscpy(title, _T("Shot Reload"));
 	shop.push_back(new Shop(title, 5, 10, ShotReloadMessage, ShotReloadUpgrade));
 	_tcscpy(title, _T("Add Barrier"));
-	shop.push_back(new Shop(title, 1, 1, AddBarrierMessage, AddBarrierUpgrade));
+	shop.push_back(new Shop(title, 2, 1, AddBarrierMessage, AddBarrierUpgrade));
+	parent = shop.back();
+	_tcscpy(title, _T("Add Shield"));
+	shop.push_back(new Shop(title, 1, 5000, AddShieldMessage, AddShieldUpgrade));
 	parent = shop.back();
 
 
@@ -118,7 +124,6 @@ void AddShotUpgrade(Shop* subject)
 void ShotDamageMessage(Shop* subject)
 {
 	int scnt = subject->GetCnt();
-	int smaxcnt = subject->GetMaxcnt();
 	int sdelta = subject->GetDelta();
 	TCHAR* sdescription = subject->GetDescription();
 	TCHAR* sdetail = subject->GetDetail();
@@ -144,7 +149,6 @@ void ShotDamageUpgrade(Shop* subject)
 void ShotReloadMessage(Shop* subject)
 {
 	int scnt = subject->GetCnt();
-	int smaxcnt = subject->GetMaxcnt();
 	int sdelta = subject->GetDelta();
 	TCHAR* sdescription = subject->GetDescription();
 	TCHAR* sdetail = subject->GetDetail();
@@ -156,8 +160,6 @@ void ShotReloadMessage(Shop* subject)
 
 	memset(text, 0, sizeof(char) * MAXLENGTH);
 	_tcscat(text, _T("Reload : "));
-	TCHAR tchar[80];
-	 //_stprintf(tchar,_T("%.2f"),player->GetCooltime() / 1000.0);
 	_tcscat(text, FLOATTOCHAR(player->GetCooltime() / 1000.0));
 	_tcscat(text, _T(" -> "));
 	_tcscat(text, FLOATTOCHAR((player->GetCooltime()-sdelta) / 1000.0));
@@ -173,16 +175,35 @@ void ShotReloadUpgrade(Shop* subject)
 void AddBarrierMessage(Shop* subject)
 {
 	int scnt = subject->GetCnt();
-	int smaxcnt = subject->GetMaxcnt();
 	TCHAR* sdescription = subject->GetDescription();
 	TCHAR* sdetail = subject->GetDetail();
+	TCHAR text[MAXLENGTH];
 
 	_tcscpy(sdescription, _T("Creates a barrier that inflicts tick damage to enemies"));
-	_tcscpy(sdetail, _T("Barrier : 0 -> 1"));
+
+	memset(text, 0, sizeof(char) * MAXLENGTH);
+	_tcscat(text, _T("Barrier : "));
+	_tcscat(text, INTTOCHAR(scnt));
+	_tcscat(text, _T(" -> "));
+	_tcscat(text, INTTOCHAR(scnt + 1));
+	_tcscpy(sdetail, text);
 }
 void AddBarrierUpgrade(Shop* subject)
 {
-	barrier.push_back(new BarrierObj(1, 100, 100));
+	//InitInstance_Barrier(hInst, {500,500}, barrier->GetSize(), 10);
+	barriers.push_back(new BarrierObj({ 500, 500 }));
+}
+void AddShieldMessage(Shop* subject) 
+{
+	TCHAR* sdescription = subject->GetDescription();
+	TCHAR* sdetail = subject->GetDetail();
+
+	_tcscpy(sdescription, _T("Adds a rechargeable shield"));
+	_tcscpy(sdetail, _T("Shield : X -> O"));
+}
+void AddShieldUpgrade(Shop* subject) 
+{
+	player->SetSCooltime(subject->GetDelta());
 }
 
 void Blank(Shop* subject)
