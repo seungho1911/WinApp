@@ -20,12 +20,12 @@
 #define DELETEINVECTOR(V) for (auto P = (V).begin(); P != (V).end();) {if ((*P)->GetHp()<=0)delete *P,P = (V).erase(P);else ++P;}
 #define SECOND(N) (N)/100.0
 
-#define INTTOCHAR(N) [](int n) -> TCHAR* {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%d"), n); return tchar;}(N)
-#define FLOATTOCHAR(N) [](float f) -> TCHAR* {TCHAR tchar[MAXLENGTH];  _stprintf(tchar,_T("%.2f"),f); return tchar;}(N)
+#define INTCAT(T,N) [](TCHAR* text, int n) -> void {TCHAR tchar[MAXLENGTH];  wsprintf(tchar, _T("%d"), n); _tcscat(text, tchar);}(T,N)
+#define FLOATCAT(T,N) [](TCHAR* text, float f) -> void {TCHAR tchar[MAXLENGTH];  _stprintf(tchar,_T("%.2f"),f); _tcscat(text, tchar);}(T,N)
 
 
 #define PI 3.1415926
-#define RADIAN(X) (X) * PI / 180
+#define RADIAN(X) (X) * PI / 180.0
 #define INF 2000000000
 
 
@@ -48,6 +48,7 @@ public:
 	void MoveToAngle(int);
 	void Rotate(double);
 	void SetAngle(double);
+	void LookAt(POS);
 
 	POINT GetScreenPos() { return _screenpos; }
 	POS GetPos() { return _pos; }
@@ -62,20 +63,13 @@ public:
 };
 
 
-class ExpObj : public Object
-{
-public:
-	ExpObj(int xp, POS pos);
-	virtual void RunOneFrame(int) override;
-};
-
-
 class MobObj : public Object
 {
 protected:
 	int _hp;
 	int _damage;
-	int _shield;
+	int _shield, _notdamagetime;
+	int _shieldcooltime, _shieldlasttime;
 public:
 	MobObj(int hp, int damage, int size, double angle, double speed, POS pos);
 
@@ -84,6 +78,9 @@ public:
 	int GetHp() { return _hp; }
 	void SetHp(int hp) { _hp = hp; }
 	int GetShield() { return _shield; }
+	void SetShieldCooltime(int cooltime) { _shieldcooltime = cooltime; }
+	int GetShieldCooltime() { return _shieldcooltime; }
+	void ChargeShield();
 	void Attacked(int damage)
 	{
 		if(_shield > damage){
@@ -110,25 +107,31 @@ public:
 	int GetDamage() { return _damage; }
 
 	virtual void RunOneFrame(int) override;
+
+	virtual void Draw(HDC, RECT);
 };
 
 class Player : public MobObj
 {
-	int _bulletcooltime, _bulletlasttime;//총알 발사 쿨
-	int _shieldcooltime, _shieldlasttime;
-	//TODO:게임 관련 변수들 추가
+	int _bulletcooltime, _bulletlasttime;
+	int _shot;
+	int _xp;
 public:
 	Player(int hp, int damage, int size, double angle, double speed, int cooltime, POS pos);
 
 	int GetCooltime() { return _bulletcooltime; }
-	int GetLasttime() { return _bulletlasttime; }
 	void SetCooltime(int cooltime) { _bulletcooltime = cooltime; }
-	void SetSCooltime(int cooltime) { _shieldcooltime = cooltime; }
+	int GetLasttime() { return _bulletlasttime; }
 	void SetLasttime(int lasttime) { _bulletlasttime = lasttime; }
+	int GetShot() { return _shot; }
+	int AddShot() { return _shot++; }
+	int GetXp() { return _xp; }
+	void AddXp(int xp) { _xp += xp; }
 	void AddDeltaTime(int deltatime);
-	void ChargeShield();
 	
 	virtual void RunOneFrame(int) override;
+
+	virtual void Draw(HDC, RECT);
 };
 
 class EnemyObj : public MobObj
@@ -144,6 +147,7 @@ class Enemy1 : public EnemyObj
 {
 public:
 	Enemy1(int hp, int damage, int size, double angle, double speed, POS pos);
+	~Enemy1();
 	virtual void RunOneFrame(int)  override;
 };
 
@@ -205,6 +209,14 @@ public:
 	int GetDamage() { return _damage; }
 	void SetDamage(int damage) { _damage = damage; }
 	void RunOneFrame(int);
+};
+
+
+class ExpObj : public MobObj
+{
+public:
+	ExpObj(int xp, POS pos);
+	virtual void RunOneFrame(int) override;
 };
 
 /*

@@ -42,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	LoadStringW(hInstance, IDC_WINAPP, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance, WndProc, szWindowClass);
 	MyRegisterClass(hInstance, WndProc_Shop, szWindowClass_Shop);
-	MyRegisterClass(hInstance, WndProc_Barrier, szWindowClass_Barrier);
+	MyRegisterClass(hInstance, WndProc_Extra, szWindowClass_Barrier);
 
 	srand(time(NULL));
 	
@@ -68,14 +68,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 }
 
 
-ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT(*WndProc)(HWND, UINT, WPARAM, LPARAM), WCHAR* name)
+ATOM MyRegisterClass(HINSTANCE hInstance, LRESULT(*WndProcal)(HWND, UINT, WPARAM, LPARAM), WCHAR* name)
 {
 	WNDCLASSEXW wcex;
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc = WndProc;
+	wcex.lpfnWndProc = WndProcal;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;

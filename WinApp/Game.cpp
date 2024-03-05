@@ -5,12 +5,14 @@ std::vector <BulletObj* > bullets;
 std::vector <EnemyObj*> enemys;
 std::vector <ExpObj*> exps;
 Player* player;
+
 BarrierStats* barrier = new BarrierStats(1, 100, 100);
 std::vector <BarrierObj*> barriers;
+
 RECT rtMainScreen;
 
-clock_t nLastTime;
-POINT ptScreenSize;
+clock_t nLastTime; //for deltatime
+POINT ptScreenSize; //화면 크기
 
 
 extern HINSTANCE hInst;
@@ -39,6 +41,10 @@ void Object::SetAngle(double angle)
 {
 	_angle = angle;
 }
+void Object::LookAt(POS p)
+{
+	SetAngle(atan2(-(GetPos().y - p.y), -(GetPos().x - p.x)));
+}
 bool Object::IsCollide(Object* t)
 {
 	POS tpos = t->GetPos();
@@ -55,15 +61,22 @@ void Object::Draw(HDC hdc, RECT rtMapSize)
 }
 
 
-ExpObj::ExpObj(int xp, POS pos) :Object(xp, 0, 0, pos){}
-void ExpObj::RunOneFrame(int deltatime){}
-
-
 MobObj::MobObj(int hp, int damage, int size, double angle, double speed, POS pos):Object(size, angle, speed, pos)
 {
 	_hp = hp;
 	_damage = damage;
 	_shield = 0;
+	_notdamagetime = 0;
+	_shieldcooltime = INF;
+	_shieldlasttime = 0;
+}
+void MobObj::ChargeShield()
+{
+	if (_notdamagetime >= 5000) {
+		_shield += _shieldlasttime / _shieldcooltime;
+		_shieldlasttime %= _shieldcooltime;
+	}
+	else _shieldlasttime = 0;
 }
 
 
@@ -75,25 +88,28 @@ void BulletObj::RunOneFrame(int deltatime)
 {
 	MoveToAngle(deltatime);
 }
- 
+void BulletObj::Draw(HDC hdc, RECT rtMapSize) {
+	HPEN hPen = CreatePen(PS_SOLID, 5, RGB(126, 210, 110));
+	HGDIOBJ hOldPen = SelectObject(hdc, hPen);
+	Object::Draw(hdc, rtMapSize);
+	SelectObject(hdc, hOldPen);
+	DeleteObject(hPen);
+}
+
 
 Player::Player(int hp, int damage, int size, double angle, double speed, int cooltime, POS pos)
 	:MobObj(hp,damage,size,angle,speed,pos)
 {
 	_bulletcooltime = cooltime;
 	_bulletlasttime = 0;
-	_shieldcooltime = INF; 
-	_shieldlasttime = 0;
+	_shot = 1;
+	_xp = 0;
 }
 void Player::AddDeltaTime(int deltatime) 
 {
+	_notdamagetime += deltatime; 
 	_bulletlasttime += deltatime; 
 	if (_shieldcooltime != INF)_shieldlasttime += deltatime; 
-}
-void Player::ChargeShield() 
-{ 
-	_shield += _shieldlasttime / _shieldcooltime;
-	_shieldlasttime %= _shieldcooltime; 
 }
 void Player::RunOneFrame(int deltatime)
 {
@@ -145,33 +161,51 @@ void Player::RunOneFrame(int deltatime)
 	rtMainScreen.top = 0;
 	rtMainScreen.bottom = ptScreenSize.y;
 	rtMainScreen.right = ptScreenSize.x;
-	
-	if (rtMainScreen.top < 0)rtMainScreen.top = 0;
-	if (rtMainScreen.bottom > ptScreenSize.y)rtMainScreen.bottom = ptScreenSize.y;
-	if (rtMainScreen.left < 0)rtMainScreen.left = 0;
-	if (rtMainScreen.right > ptScreenSize.x)rtMainScreen.right = ptScreenSize.x;
 
 	//Shot bullet
 	if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 && player->GetLasttime() >= player->GetCooltime()) {
 		POINT ptMouse;
 		GetCursorPos(&ptMouse);
-		bullets.push_back(new BulletObj(10, 50, R / 10, atan2((ptMouse.y - psPlayer.y), (ptMouse.x - psPlayer.x)), 100, psPlayer));
+		
+		int shot = player->GetShot();
+		double angle = RADIAN(20);
+		if (shot % 2 == 0) {
+			for (int i = 0; i < shot; i++) {
+				printf("%f %f\n", ((-(shot - 1) / 2.0) + (double)i), ((-(shot - 1) / 2.0) + (double)i) * angle + atan2((ptMouse.y - psPlayer.y), (ptMouse.x - psPlayer.x)));
+				double a = atan2((ptMouse.y - psPlayer.y), (ptMouse.x - psPlayer.x));
+				bullets.push_back(new BulletObj(10, 50, R / 10, ((-(shot - 1) / 2.0) + i) * angle + a, 100, psPlayer));
+			}
+		}
+		else {
+			for (int i = 0; i < shot; i++) {			
+				bullets.push_back(new BulletObj(10, 50, R / 10, ((-(shot - 1) / 2) + i) * angle+atan2((ptMouse.y - psPlayer.y), (ptMouse.x - psPlayer.x)), 100, psPlayer));
+			}
+		}
 		player->SetLasttime(0);
 	}
-	player->ChargeShield();
 	player->SetPos(psPlayer);
 }
-
+void Player::Draw(HDC hdc, RECT rtMapSize) {
+	HPEN hPen = CreatePen(PS_SOLID, 5, RGB(0, 255, 0));
+	HGDIOBJ hOldPen = SelectObject(hdc, hPen);
+	Object::Draw(hdc, rtMapSize);
+	SelectObject(hdc, hOldPen);
+	DeleteObject(hPen);
+}
 
 Enemy1::Enemy1(int hp, int damage, int size, double angle, double speed, POS pos)
 	:EnemyObj(hp, damage, size, angle, speed, pos)
 {
 	_maxtime = 1;
 }
+Enemy1::~Enemy1()
+{
+	exps.push_back(new ExpObj(5, GetPos()));
+}
 void Enemy1::RunOneFrame(int deltatime)
 {
 	POS psPlayer = player->GetPos();
-	SetAngle(atan2(-(GetPos().y - psPlayer.y), -(GetPos().x - psPlayer.x)));
+	LookAt(psPlayer);
 	MoveToAngle(deltatime);
 }
 
@@ -196,7 +230,7 @@ Enemy3::Enemy3(int hp, int damage, int size, double angle, double speed, POS pos
 	WNDCLASSEXW wcex;
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc = WndProc_BOSS;
+	wcex.lpfnWndProc = WndProc_Extra;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInst;
@@ -239,11 +273,14 @@ void Enemy3::RunOneFrame(int deltatime)
 		_lasttime++;
 		_lasttime %= _maxtime;
 		if(_lasttime == 0) {
-			//for (int i = 0; i < 360; i += 45) {
-				int i = 0;
-				EnemyObj* p = new Enemy4(5, 1, 5, RADIAN(i), 1000, GetPos());
+			EnemyObj* p = new Enemy4(INF, 1, 5, 0, 1000, GetPos());
+			enemys.push_back(p);
+		}
+		if(_lasttime == 1000) {
+			for (int i = 0; i < 360; i += 45) {
+				EnemyObj* p = new Enemy2(10, 5, 5, RADIAN(i), 8, GetPos());
 				enemys.push_back(p);
-			//}
+			}
 		}
 		if (_lasttime % 50 == 0) {
 			Rotate(RADIAN(4.5));
@@ -295,7 +332,7 @@ void Enemy4::RunOneFrame(int deltatime)
 			_size = 1;
 		}
 		if (_lasttime < 800) {
-			SetAngle(atan2(-(GetPos().y - psPlayer.y), -(GetPos().x - psPlayer.x)));
+			LookAt(psPlayer);
 		}
 		if (_lasttime % 10 == 0 && _lasttime > 1400) {
 			_size += 2;
@@ -341,14 +378,12 @@ void BarrierObj::Draw(HDC hdc, RECT rtWindow)
 }
 bool BarrierObj::IsCollide(Object* t)
 {
-
 	POS tpos = t->GetPos();
 	POS thispos = this->GetPos();
-	int size = this->GetSize();
+	int tsize = t->GetSize();
+	int thissize = this->GetSize();
 
-	return (pow(abs((((thispos.x - size / 2 <= tpos.x ? 2 : 0) | ((thispos.x - size / 2 > tpos.x || thispos.x + size / 2 < tpos.x) ? 1 : 0)) - 2)) * (thispos.x + size * (((thispos.x - size / 2 <= tpos.x ? 2 : 0) | ((thispos.x - size / 2 > tpos.x || thispos.x + size / 2 < tpos.x) ? 1 : 0)) - 2) - tpos.x), 2)
-		+ pow(abs((((thispos.y - size / 2 <= tpos.y ? 2 : 0) | ((thispos.y - size / 2 > tpos.y || thispos.y + size / 2 < tpos.y) ? 1 : 0)) - 2)) * (thispos.y + size * (((thispos.y - size / 2 <= tpos.y ? 2 : 0) | ((thispos.y - size / 2 > tpos.y || thispos.y + size / 2 < tpos.y) ? 1 : 0)) - 2) - tpos.y), 2)
-		<= pow(t->GetSize(), 2));
+	return ((thispos.x - thissize / 2 - tsize <= tpos.x && tpos.x <= thispos.x + thissize / 2 + tsize) && (thispos.y - thissize / 2 - tsize <= tpos.y && tpos.y <= thispos.y + thissize / 2 + tsize)) && (((thispos.x - thissize / 2 <= tpos.x && tpos.x <= thispos.x + thissize / 2) || (thispos.y - thissize / 2 <= tpos.y && tpos.y <= thispos.y + thissize / 2)) || pow(min(abs(thispos.x - thissize / 2 - tpos.x), abs(thispos.x + thissize / 2 - tpos.x)), 2) + pow(min(abs(thispos.y - thissize / 2 - tpos.y), abs(thispos.y + thissize / 2 - tpos.y)), 2) <= pow(tsize, 2));
 	/*
 	POINT tpos = t->GetScreenPos(), vertex;
 	int x = 0, y = 0,check;
@@ -418,6 +453,24 @@ void BarrierStats::RunOneFrame(int deltatime)
 	_attacklasttime %= _attackcooltime;
 }
 
+
+ExpObj::ExpObj(int xp, POS pos) :MobObj(1, 0, xp, 0, 100, pos) {}
+void ExpObj::RunOneFrame(int deltatime)
+{
+	POS psPlayer = player->GetPos();
+	POS pos = GetPos();
+	long long int dis = (psPlayer.x - pos.x) * (psPlayer.x - pos.x) + (psPlayer.y - pos.y) * (psPlayer.y - pos.y);
+	if (dis < pow(100, 2)) {
+		if (dis < pow(_speed * SECOND(deltatime), 2)) {
+			SetPos(psPlayer);
+			return;
+		}
+		LookAt(psPlayer);
+		MoveToAngle(deltatime);
+	}
+}
+
+
 void Init()
 {
 	srand(time(NULL));
@@ -445,9 +498,17 @@ bool RunFrame()
 	for (auto i : barriers) {
 		i->RunOneFrame(deltatime);
 	}
+	for (auto i : exps) {
+		i->RunOneFrame(deltatime);
+	}
 
 	DELETEINVECTOR(enemys)
 	CheckCollision();
+
+	if (rtMainScreen.top < 0)rtMainScreen.top = 0;
+	if (rtMainScreen.bottom > ptScreenSize.y)rtMainScreen.bottom = ptScreenSize.y;
+	if (rtMainScreen.left < 0)rtMainScreen.left = 0;
+	if (rtMainScreen.right > ptScreenSize.x)rtMainScreen.right = ptScreenSize.x;
 	
 	nLastTime = clock();
 	if (player->GetHp() <= 0)return false;
@@ -455,12 +516,23 @@ bool RunFrame()
 }
 void CheckCollision()
 {
+	//exp vs player
+	for (auto& i : exps) {
+		if (i->IsCollide(player)) {
+			player->AddXp(i->GetSize());
+			i->Kill();
+		}
+	}
+	DELETEINVECTOR(exps)
+
 	//enemy vs player
 	for (auto& i : enemys) {
 		if (i->IsCollide(player)) {
-			player->SetHp(player->GetHp() - i->GetDamage());
+			player->Attacked(i->GetDamage());
+			i->Kill();
 		}
 	}
+	DELETEINVECTOR(enemys)
 
 	//bullet vs enemy
 	for (auto& i : bullets) {
@@ -470,6 +542,7 @@ void CheckCollision()
 				j->SetHp(hp - (i->GetDamage()));
 				i->Kill();*/
 				j->Attacked(i->GetDamage());
+				i->Kill();
 				break;
 			}
 		}
@@ -538,6 +611,8 @@ void CheckCollision()
 		}
 	}
 	DELETEINVECTOR(enemys)
+
+	player->ChargeShield();
 }
 void SpawnEnemy()
 {
@@ -548,29 +623,31 @@ void SpawnEnemy()
 }
 void DrawGame(HDC hdc, RECT rtWindow)
 {
-	HPEN myPen = CreatePen(PS_SOLID, 7, RGB(0, 255, 0));
-	HGDIOBJ oldPen = SelectObject(hdc, myPen);
-	
+	HBRUSH hBrush = (HBRUSH)GetStockObject(NULL_BRUSH); 
+	HGDIOBJ hOldBrush = SelectObject(hdc, hBrush);
 
-	player->Draw(hdc, rtWindow);
-
-	SelectObject(hdc, oldPen);
-	DeleteObject(myPen);
-
+	HPEN hPen = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
+	HGDIOBJ hOldPen = SelectObject(hdc, hPen);
 	for (auto i : enemys) {
 		i->Draw(hdc, rtWindow);
 	}
+	DeleteObject(hPen);
+
+	player->Draw(hdc, rtWindow);
 	for (auto i : bullets) {
 		i->Draw(hdc, rtWindow);
 	}
 
-	myPen = CreatePen(PS_SOLID, 5, RGB(255, 0, 255));
-	SelectObject(hdc, myPen);
+	hPen = CreatePen(PS_SOLID, 5, RGB(255, 0, 255));
+	SelectObject(hdc, hPen);
 	for (auto i : exps) {
 		i->Draw(hdc, rtWindow);
 	}
-	SelectObject(hdc, oldPen);
-	DeleteObject(myPen);
+	SelectObject(hdc, hOldPen);
+	DeleteObject(hPen);
+
+	SelectObject(hdc, hOldBrush);
+	DeleteObject(hBrush);
 
 	///brush and pen need
 	for (auto i : barriers) {
