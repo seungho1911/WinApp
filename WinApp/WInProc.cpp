@@ -54,6 +54,7 @@ void UpdateFrame(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 
 void MobSpawn(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 {
+	if (bShopOpen)return;
 	POS psEnemy = player->GetPos();
 	psEnemy.x += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
 	psEnemy.y += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
@@ -183,7 +184,7 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		int windowcenter = rtwindow.right / 2;
 		for (int i = 0; i < 3; i++) {
 			int center = windowcenter + (i - 1) * (SHOPWIDTH + SHOPGAP);
-			B_upgrade[i] = Button({ center + SHOPWIDTH / 2 , 150, center + SHOPWIDTH / 2 ,700 }, SHOPCURVE);
+			B_upgrade[i] = Button({ center - SHOPWIDTH / 2 , 150, center + SHOPWIDTH / 2 ,700 }, SHOPCURVE);
 		}
 		B_reset = Button({ windowcenter - 100,750,windowcenter + 100,850 }, 50);
 
@@ -210,10 +211,8 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		RECT rtwindow;
 		GetClientRect(hWnd, &rtwindow);
 
-		int windowcenter = rtwindow.right / 2;
 		for (int i=0;i<3;i++) {
 			int choice = ShopChoice[i];
-			int center = windowcenter + (i - 1) * (SHOPWIDTH + SHOPGAP);
 			if (B_upgrade[i].IsCollide(pt)) {
 				if (!shop[choice]->Upgrade())return 0;
 				ShopChoice[i] = SHOPLENGTH;
@@ -269,20 +268,20 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 
 			//text
 			SelectObject(hdc, hFont50);
-			TextArea = { rt.left / 2, 200, rt.right / 2, 250 };
+			TextArea = { rt.left, 200, rt.right, 250 };
 			DrawText(hdc, shop[i]->GetName(), -1, &TextArea, DT_CENTER);
 
 			SelectObject(hdc, hFont30);
-			TextArea = { rt.left / 2, 350, rt.right / 2, 550 };
+			TextArea = { rt.left, 350, rt.right, 550 };
 			DrawText(hdc, shop[i]->GetDescription(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 
 			TCHAR tcost[MAXLENGTH] = _T("");
 			INTCAT(tcost, shop[i]->GetCost());
-			TextArea = { rt.left / 2, 590, rt.right / 2, 640 };
+			TextArea = { rt.left, 590, rt.right, 640 };
 			DrawText(hdc, tcost, -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 
 			SelectObject(hdc, hFont20);
-			TextArea = { rt.left / 2, 650, rt.right / 2, 700 };
+			TextArea = { rt.left, 650, rt.right, 700 };
 			DrawText(hdc, shop[i]->GetDetail(), -1, &TextArea, DT_CENTER | DT_WORDBREAK | DT_EDITCONTROL);
 			SelectObject(hdc, hOldFont);
 
@@ -329,12 +328,12 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 
 LRESULT CALLBACK WndProc_End(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	printf("$");
+	static HFONT font;
 	switch (message)
 	{
 	case WM_CREATE:
 	{
-		static HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
+		font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
 	}
 	case WM_PAINT:
 	{
