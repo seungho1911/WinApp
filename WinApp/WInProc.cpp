@@ -21,9 +21,6 @@ void UpdateFrame(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 	GetWindowRect(hWnd, &rtMainScreen);
 
 	if (!RunFrame()) {
-		KillTimer(hWnd, nID);
-		KillTimer(hWnd, 2);
-
 		WNDCLASSEXW wcex;
 		wcex.cbSize = sizeof(WNDCLASSEX);
 		wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -41,7 +38,7 @@ void UpdateFrame(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 
 		HWND hResultWnd = CreateWindowW(_T("GameResult"), _T("GameResult"), WS_POPUP | WS_VISIBLE,
 			CW_USEDEFAULT, 0, 200, 200, nullptr, nullptr, hInst, nullptr);
-		if (hResultWnd)
+		if (!hResultWnd)
 		{
 			throw("GameResult ERROR");
 		}
@@ -61,7 +58,7 @@ void MobSpawn(HWND hWnd, UINT_PTR nID, UINT uElapse, TIMERPROC lpTimerFunc)
 	psEnemy.x += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
 	psEnemy.y += (200 + rand() % 100) * (rand() % 2 == 1 ? 1 : -1);
 
-	//º≥¡§
+	//ÏÑ§Ï†ï
 	enemys.push_back((EnemyObj*)new Enemy3(1, 2, R / 2, 0, 10, psEnemy));
 	enemys.push_back((EnemyObj*)new Enemy1(1, 2, 20, 0, 6, psEnemy));
 }
@@ -96,7 +93,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		GrapicBuffer GBMain = GrapicBuffer(hWnd, hMaindc);
 		HDC hdc = GBMain.GetHDC();
 
-		HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("∏Ì¡∂"));
+		HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("Î™ÖÏ°∞"));
 		HGDIOBJ oldfont = SelectObject(hdc, font);
 		TCHAR thp[MAXLENGTH] = _T("HP:");
 		INTCAT(thp, player->GetHp());
@@ -120,6 +117,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	case WM_DESTROY: {
+		KillTimer(hWnd, 1);
+		KillTimer(hWnd, 2);
 		DestroyWindow(hWnd);
 		break;
 	}
@@ -174,10 +173,10 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		hBrushGreen = CreateSolidBrush(RGB(200, 255, 200));
 		hBrushBlue = CreateSolidBrush(RGB(0, 200, 255));
 		hBrushBlack = CreateSolidBrush(RGB(0, 0, 0));
-		hFont80 = CreateFont(80, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("∏Ì¡∂"));
-		hFont50 = CreateFont(50, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("∏Ì¡∂"));
-		hFont30 = CreateFont(30, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("∏Ì¡∂"));
-		hFont20 = CreateFont(20, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("∏Ì¡∂"));
+		hFont80 = CreateFont(80, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("Î™ÖÏ°∞"));
+		hFont50 = CreateFont(50, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("Î™ÖÏ°∞"));
+		hFont30 = CreateFont(30, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("Î™ÖÏ°∞"));
+		hFont20 = CreateFont(20, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("Î™ÖÏ°∞"));
 
 		RECT rtwindow;
 		GetClientRect(hWnd, &rtwindow);
@@ -333,6 +332,10 @@ LRESULT CALLBACK WndProc_End(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 	printf("$");
 	switch (message)
 	{
+	case WM_CREATE:
+	{
+		static HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("Î™ÖÏ°∞"));
+	}
 	case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
@@ -340,18 +343,17 @@ LRESULT CALLBACK WndProc_End(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 		
 		RECT rtClient;
 		GetClientRect(hWnd, &rtClient);
-
-		HFONT font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("∏Ì¡∂"));
+		
 		HGDIOBJ oldfont = SelectObject(hdc, font);
 		TCHAR thp[MAXLENGTH] = _T("Game Over");
 		DrawText(hdc, thp, -1, &rtClient, DT_CENTER || DT_VCENTER);
 		SelectObject(hdc, oldfont);
-		DeleteObject(font);
 
 		EndPaint(hWnd, &ps);
 		break;
 	}
 	case WM_DESTROY:
+		DeleteObject(font);
 		DestroyWindow(hWnd);
 		break;
 	default:
@@ -361,7 +363,7 @@ LRESULT CALLBACK WndProc_End(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 }
 
 
-// ¡§∫∏ ¥Î»≠ ªÛ¿⁄¿« ∏ﬁΩ√¡ˆ √≥∏Æ±‚¿‘¥œ¥Ÿ.
+// Ï†ïÎ≥¥ ÎåÄÌôî ÏÉÅÏûêÏùò Î©îÏãúÏßÄ Ï≤òÎ¶¨Í∏∞ÏûÖÎãàÎã§.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
