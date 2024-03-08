@@ -218,7 +218,7 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 				ShopChoice[i] = SHOPLENGTH;
 				InvalidateRect(hWnd, nullptr, TRUE);
 
-				break;
+				return 0;
 			}
 		}
 		if(B_reset.IsCollide(pt)){
@@ -246,7 +246,6 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		hOldBrush = (HBRUSH)SelectObject(hdc, hBrushNull);
 		hOldPen = (HPEN)SelectObject(hdc, hPen5Cyan);
 		DrawRoundRectangle(hdc, { TextArea.left + 5,TextArea.top + 5,TextArea.right - 5,TextArea.bottom - 5 }, 30);
-		SelectObject(hdc, hOldPen);
 
 		SetTextColor(hdc, RGB(254, 253, 72));
 		hOldFont = (HFONT)SelectObject(hdc, hFont80);
@@ -286,18 +285,23 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			SelectObject(hdc, hOldFont);
 
 			//bar
-			hOldPen = (HPEN)SelectObject(hdc, hPen2Cyan);
 			for (int j = 0; j < smaxcnt; j++) {
 				if (j < scnt)SelectObject(hdc, hBrushGreen);
 				else if (j == scnt)SelectObject(hdc, hBrushBlue);
 				else SelectObject(hdc, hBrushRed);
 				Rectangle(hdc, (rt.left+rt.right)/2 - smaxcnt * barwidth / 2 + j * barwidth, 260, (rt.left + rt.right) / 2 - smaxcnt * barwidth / 2 + (j + 1) * barwidth, 270);
 			}
-			SelectObject(hdc, hOldPen);
 			k++;
 		}
+		SelectObject(hdc, hPen5White);
+		B_reset.Draw(hdc);
+		SelectObject(hdc, hFont50);
+		TextArea = B_reset.GetRt();
+		DrawText(hdc, _T("Reset"), -1, &TextArea, DT_CENTER);
+		
+		SelectObject(hdc, hOldPen);
+		SelectObject(hdc, hOldFont);
 		SetTextColor(hdc, 0x000000);
-
 		SetDCBrushColor(hdc, RGB(255, 255, 255));
 		SelectObject(hdc, hOldBrush);
 
@@ -329,11 +333,24 @@ LRESULT CALLBACK WndProc_Shop(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 LRESULT CALLBACK WndProc_End(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static HFONT font;
+	static Button B_restart;
 	switch (message)
 	{
 	case WM_CREATE:
 	{
 		font = CreateFont(40, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, 0, _T("명조"));
+		B_restart = Button();
+	}	
+	case WM_LBUTTONDOWN:
+	{
+		POINT pt;
+		pt.x = LOWORD(lParam);
+		pt.y = HIWORD(lParam);
+		if(B_restart.IsCollide(pt)){
+			if (!InitInstance(hInstance, nCmdShow))throw("new game error");
+			DestroyWindow(hWnd);
+		}
+		break;
 	}
 	case WM_PAINT:
 	{
